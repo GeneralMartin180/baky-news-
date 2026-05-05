@@ -109,6 +109,7 @@ type GetNewsOptions = {
 const DEFAULT_LANGUAGE: LanguageCode = "sk";
 const DEFAULT_LOCAL_EDITION: LocalEdition = "all";
 const DEFAULT_REGION: RegionCode = "SK";
+const IS_VERCEL_RUNTIME = Boolean(process.env.VERCEL);
 const SUPPORTED_LANGUAGES: LanguageCode[] = ["sk", "en", "cs", "de"];
 const SUPPORTED_LOCAL_EDITIONS: LocalEdition[] = [
   "all",
@@ -228,11 +229,14 @@ const TOPIC_KEYWORDS: Array<{ keywords: string[]; label: string }> = [
   { label: "Kultúra", keywords: ["film", "hudb", "serial", "festival", "divadl", "kultur", "stream"] },
   { label: "Šport", keywords: ["sport", "futbal", "hokej", "tenis", "liga", "zapas", "trener"] },
 ];
-const DEFAULT_IMAGE_ENRICHMENT_LIMIT = 24;
+const DEFAULT_IMAGE_ENRICHMENT_LIMIT = IS_VERCEL_RUNTIME ? 8 : 24;
 const FEED_FRESH_TTL_MS = 2 * 60 * 1000;
 const FEED_STALE_TTL_MS = 12 * 60 * 1000;
 const PREWARM_INTERVAL_MS = 3 * 60 * 1000;
-const SEARCH_IMAGE_ENRICHMENT_LIMIT = 8;
+const SEARCH_IMAGE_ENRICHMENT_LIMIT = IS_VERCEL_RUNTIME ? 4 : 8;
+const ARTICLE_ENRICHMENT_CONCURRENCY = IS_VERCEL_RUNTIME ? 3 : 8;
+const GOOGLE_NEWS_TIMEOUT_MS = IS_VERCEL_RUNTIME ? 4000 : 7000;
+const ARTICLE_IMAGE_TIMEOUT_MS = IS_VERCEL_RUNTIME ? 4000 : 7000;
 const preparedFeeds = new Map<string, PreparedFeedEntry>();
 const inflightFeedRefreshes = new Map<string, Promise<PreparedFeedEntry>>();
 const sourceRuntime = new Map<string, SourceRuntimeState>();
@@ -960,7 +964,7 @@ async function getGoogleNewsDecodingParams(base64Str: string) {
         }
       },
       1,
-      [7000]
+      [GOOGLE_NEWS_TIMEOUT_MS]
     );
 
     const $ = cheerio.load(response.data);
@@ -1030,7 +1034,7 @@ async function resolveGoogleNewsArticleUrl(articleUrl: string): Promise<string> 
           "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
         },
-        timeout: 8000,
+        timeout: GOOGLE_NEWS_TIMEOUT_MS,
       }
     );
 
@@ -1118,7 +1122,7 @@ async function extractPrimaryArticleImage(articleUrl: string): Promise<string> {
         }
       },
       1,
-      [7000]
+      [ARTICLE_IMAGE_TIMEOUT_MS]
     );
 
     const $ = cheerio.load(response.data);
@@ -1676,39 +1680,56 @@ async function enrichArticles(
       .map((article) => article.url)
   );
 
-  return Promise.all(
-    articles.map(async (article) => {
-      if (!articleUrlsToEnrich.has(article.url)) {
-        return article;
+  const result = [...articles];
+  const indexesToEnrich = articles
+    .map((article, index) => ({ article, index }))
+    .filter(({ article }) => articleUrlsToEnrich.has(article.url));
+
+  let cursor = 0;
+  const workers = Array.from(
+    { length: Math.min(ARTICLE_ENRICHMENT_CONCURRENCY, indexesToEnrich.length) },
+    async () => {
+      while (cursor < indexesToEnrich.length) {
+        const current = indexesToEnrich[cursor];
+        cursor += 1;
+
+        try {
+          const article = current.article;
+          const isGoogleWrappedUrl = Boolean(getGoogleNewsArticleId(article.url));
+          const resolvedUrl = isGoogleWrappedUrl
+            ? await resolveGoogleNewsArticleUrl(article.url)
+            : article.url;
+
+          if (isGoogleWrappedUrl && resolvedUrl === article.url && !article.urlToImage) {
+            result[current.index] = article;
+            continue;
+          }
+
+          const currentImageUrl = article.urlToImage;
+          const needsImageBackfill =
+            !currentImageUrl || shouldEnhanceArticleImage(resolvedUrl, currentImageUrl);
+          const nextImageUrl = needsImageBackfill
+            ? (await extractPrimaryArticleImage(resolvedUrl)) || currentImageUrl
+            : currentImageUrl;
+
+          result[current.index] =
+            resolvedUrl === article.url && nextImageUrl === article.urlToImage
+              ? article
+              : {
+                  ...article,
+                  url: resolvedUrl,
+                  urlToImage: nextImageUrl,
+                };
+        } catch (error) {
+          console.warn(`Article enrichment failed for ${current.article.url}`, error);
+          result[current.index] = current.article;
+        }
       }
-
-      const isGoogleWrappedUrl = Boolean(getGoogleNewsArticleId(article.url));
-      const resolvedUrl = isGoogleWrappedUrl
-        ? await resolveGoogleNewsArticleUrl(article.url)
-        : article.url;
-
-      if (isGoogleWrappedUrl && resolvedUrl === article.url && !article.urlToImage) {
-        return article;
-      }
-
-      const currentImageUrl = article.urlToImage;
-      const needsImageBackfill =
-        !currentImageUrl || shouldEnhanceArticleImage(resolvedUrl, currentImageUrl);
-      const nextImageUrl = needsImageBackfill
-        ? (await extractPrimaryArticleImage(resolvedUrl)) || currentImageUrl
-        : currentImageUrl;
-
-      if (resolvedUrl === article.url && nextImageUrl === article.urlToImage) {
-        return article;
-      }
-
-      return {
-        ...article,
-        url: resolvedUrl,
-        urlToImage: nextImageUrl,
-      };
-    })
+    }
   );
+
+  await Promise.all(workers);
+  return result;
 }
 
 export async function getArticleContent(url: string): Promise<ArticleContentResult> {
