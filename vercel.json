@@ -5,7 +5,6 @@
   "outputDirectory": "dist",
   "functions": {
     "api/*.ts": {
-      "runtime": "nodejs",
       "maxDuration": 30
     }
   }
