@@ -477,6 +477,13 @@ function buildGoogleNewsUrl(
   return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=${language}&gl=${region}&ceid=${region}:${language}`;
 }
 
+function buildGoogleNewsTopHeadlinesUrl(
+  language: LanguageCode,
+  region: RegionCode
+): string {
+  return `https://news.google.com/rss?hl=${language}&gl=${region}&ceid=${region}:${language}`;
+}
+
 function buildLocalEditionCandidates(
   localEdition: LocalEdition,
   language: LanguageCode = DEFAULT_LANGUAGE,
@@ -579,11 +586,36 @@ function buildFeedCandidates(
       return [
         { label: "aktuality-general", url: "https://www.aktuality.sk/rss/" },
         {
+          label: "google-top-sk",
+          url: buildGoogleNewsTopHeadlinesUrl(language, region),
+        },
+        {
           label: "google-general",
           url: buildGoogleNewsUrl(GOOGLE_NEWS_TOPICS[language].general, language, region),
         }
       ];
   }
+}
+
+function buildEmergencyFeedCandidates(
+  category: Category = "general",
+  language: LanguageCode = DEFAULT_LANGUAGE,
+  region: RegionCode = DEFAULT_REGION
+): FeedCandidate[] {
+  return [
+    {
+      label: `google-top-${language}-${region}`,
+      url: buildGoogleNewsTopHeadlinesUrl(language, region),
+    },
+    {
+      label: "google-top-en-us",
+      url: buildGoogleNewsTopHeadlinesUrl("en", "US"),
+    },
+    {
+      label: `google-emergency-${category}`,
+      url: buildGoogleNewsUrl(GOOGLE_NEWS_TOPICS.en[category] ?? GOOGLE_NEWS_TOPICS.en.general, "en", "US"),
+    },
+  ];
 }
 
 function getCategoryPageConfig(
@@ -1504,7 +1536,25 @@ async function buildNewsFeedResponse(
       options.normalizedLanguage,
       options.normalizedRegion
     );
-    const primaryArticles = await fetchCandidateArticles(primaryCandidates);
+    let primaryArticles: NewsArticle[] = [];
+
+    try {
+      primaryArticles = await fetchCandidateArticles(primaryCandidates);
+    } catch (primaryError) {
+      console.warn(
+        `Primary feed candidates failed for ${options.requestedCategory}, trying emergency fallback.`,
+        primaryError
+      );
+
+      primaryArticles = await fetchCandidateArticles(
+        buildEmergencyFeedCandidates(
+          options.requestedCategory,
+          options.normalizedLanguage,
+          options.normalizedRegion
+        )
+      );
+      sourceMode = "rss-fallback";
+    }
 
     if (options.useLocalEdition) {
       try {

@@ -5,7 +5,7 @@ import {
   HttpError,
 } from "./news-service";
 import { getWeatherSnapshot } from "./weather-service";
-import type { LanguageCode, LocalEdition, RegionCode } from "../src/types";
+import type { LanguageCode, LocalEdition, NewsFeedResponse, RegionCode } from "../src/types";
 
 type QueryValue = string | undefined;
 
@@ -75,6 +75,20 @@ export async function handleNewsRequest(request: ApiRequestLike, response: ApiRe
     response.status(200).json(result.feed);
   } catch (error) {
     console.error("Error fetching news:", error);
+    if (process.env.NODE_ENV === "production") {
+      const emptyFeed = {
+        articles: [],
+        editorial: null,
+        localEdition: null,
+      } satisfies NewsFeedResponse;
+      setCacheControl(response, "no-store");
+      setHeader(response, "X-Baky-Cache-State", "error-empty");
+      setHeader(response, "X-Baky-Feed-Updated-At", new Date().toISOString());
+      setHeader(response, "X-Baky-Source-Mode", "error-empty");
+      response.status(200).json(emptyFeed);
+      return;
+    }
+
     response.status(500).json({ error: "Chyba pri stahovani sprav." });
   }
 }
