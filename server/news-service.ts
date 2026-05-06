@@ -504,9 +504,11 @@ function buildLocalEditionCandidates(
     return [];
   }
 
-  return [
-    ...dedupeFeedCandidates([...BBC_FEEDS.general, ...BBC_FEEDS.business]),
-  ];
+  return dedupeFeedCandidates([
+    ...buildFeedCandidates("general", "", language, region),
+    { label: "aktuality-business", url: "https://www.aktuality.sk/rss/ekonomika/" },
+    ...BBC_FEEDS.business,
+  ]);
 }
 
 function buildFeedCandidates(
