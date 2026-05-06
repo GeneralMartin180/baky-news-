@@ -1,5 +1,13 @@
-import { handleHealthRequest } from "../server/api-handlers";
+import { getBackendHealth } from "../server/news-service";
 
-export default async function handler(request: any, response: any) {
-  return handleHealthRequest(request, response);
-}
+export default {
+  async fetch() {
+    return new Response(JSON.stringify(getBackendHealth()), {
+      status: 200,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    });
+  },
+};
