@@ -119,6 +119,39 @@ function buildJsonResponse(payload: unknown, init?: ResponseInit) {
   });
 }
 
+function sendJson(response: any, payload: unknown, status = 200, headers: Record<string, string> = {}) {
+  if (response?.setHeader) {
+    for (const [name, value] of Object.entries({
+      "Content-Type": "application/json; charset=utf-8",
+      ...headers,
+    })) {
+      response.setHeader(name, value);
+    }
+  }
+
+  if (response?.status && response?.json) {
+    return response.status(status).json(payload);
+  }
+
+  return buildJsonResponse(payload, { status, headers });
+}
+
+function readSearchParams(request: any) {
+  if (request?.query) {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(request.query as Record<string, unknown>)) {
+      if (typeof value === "string") {
+        params.set(key, value);
+      } else if (Array.isArray(value) && typeof value[0] === "string") {
+        params.set(key, value[0]);
+      }
+    }
+    return params;
+  }
+
+  return new URL(request.url).searchParams;
+}
+
 function normalizeCategory(value: string | null): Category {
   return CATEGORIES.has(value as Category) ? (value as Category) : "general";
 }
@@ -385,14 +418,14 @@ function buildEditorial(
   };
 }
 
-export default {
-  async fetch(request: Request) {
-    const url = new URL(request.url);
-    const category = normalizeCategory(url.searchParams.get("category"));
-    const query = (url.searchParams.get("q") ?? "").trim();
-    const language = normalizeLanguage(url.searchParams.get("lang"));
-    const region = normalizeRegion(url.searchParams.get("region"));
-    const localEdition = normalizeLocalEdition(url.searchParams.get("localEdition"));
+export default async function handler(request: any, response?: any) {
+  try {
+    const searchParams = readSearchParams(request);
+    const category = normalizeCategory(searchParams.get("category"));
+    const query = (searchParams.get("q") ?? "").trim();
+    const language = normalizeLanguage(searchParams.get("lang"));
+    const region = normalizeRegion(searchParams.get("region"));
+    const localEdition = normalizeLocalEdition(searchParams.get("localEdition"));
     const localEditionSummary = buildLocalEditionSummary(language, region, localEdition);
 
     const articles = await fetchArticles(
@@ -411,14 +444,25 @@ export default {
       localEdition: localEditionSummary,
     } satisfies NewsFeedResponse;
 
-    return buildJsonResponse(feed, {
-      status: 200,
-      headers: {
-        "Cache-Control": "public, max-age=60, s-maxage=180, stale-while-revalidate=600",
-        "X-Baky-Cache-State": "vercel-light",
-        "X-Baky-Feed-Updated-At": new Date().toISOString(),
-        "X-Baky-Source-Mode": "vercel-light-rss",
-      },
+    return sendJson(response, feed, 200, {
+      "Cache-Control": "public, max-age=60, s-maxage=180, stale-while-revalidate=600",
+      "X-Baky-Cache-State": "vercel-light",
+      "X-Baky-Feed-Updated-At": new Date().toISOString(),
+      "X-Baky-Source-Mode": "vercel-light-rss",
     });
-  },
-};
+  } catch (error) {
+    console.error("Vercel lightweight news handler failed:", error);
+    const emptyFeed = {
+      articles: [],
+      editorial: null,
+      localEdition: null,
+    } satisfies NewsFeedResponse;
+
+    return sendJson(response, emptyFeed, 200, {
+      "Cache-Control": "no-store",
+      "X-Baky-Cache-State": "vercel-error-empty",
+      "X-Baky-Feed-Updated-At": new Date().toISOString(),
+      "X-Baky-Source-Mode": "vercel-error-empty",
+    });
+  }
+}
