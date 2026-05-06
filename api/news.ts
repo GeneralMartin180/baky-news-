@@ -1,68 +1,67 @@
-import {
-  handleNewsRequest,
-  type ApiRequestLike,
-  type ApiResponseLike,
-} from "../server/api-handlers.ts";
+import { getNewsWithMeta } from "../server/news-service.ts";
+import type { LanguageCode, LocalEdition, NewsFeedResponse, RegionCode } from "../src/types";
 
-type BufferedApiResponse = ApiResponseLike & {
-  toResponse(): Response;
-};
+export const runtime = "nodejs";
 
-function readQuery(request: any): NonNullable<ApiRequestLike["query"]> {
-  if (request?.query && typeof request.query === "object") {
-    return request.query as NonNullable<ApiRequestLike["query"]>;
-  }
-
-  const searchParams = new URL(request.url).searchParams;
-  const query: Record<string, string> = {};
-
-  for (const [key, value] of searchParams.entries()) {
-    query[key] = value;
-  }
-
-  return query;
-}
-
-function createBufferedApiResponse(): BufferedApiResponse {
-  let payload: unknown = null;
-  let statusCode = 200;
-  const headers = new Headers({
-    "Content-Type": "application/json; charset=utf-8",
+function jsonResponse(payload: unknown, init?: ResponseInit) {
+  return new Response(JSON.stringify(payload), {
+    ...init,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      ...(init?.headers ?? {}),
+    },
   });
+}
 
-  const response: BufferedApiResponse = {
-    json(nextPayload: unknown) {
-      payload = nextPayload;
-      return nextPayload;
-    },
-    setHeader(name: string, value: string) {
-      headers.set(name, value);
-    },
-    status(code: number) {
-      statusCode = code;
-      return response;
-    },
-    toResponse() {
-      return new Response(JSON.stringify(payload), {
-        headers,
-        status: statusCode,
+export default {
+  async fetch(request: Request) {
+    try {
+      const searchParams = new URL(request.url).searchParams;
+      const category = searchParams.get("category") ?? "general";
+      const query = (searchParams.get("q") ?? "").trim();
+      const refresh = searchParams.get("refresh") === "true";
+      const language = (searchParams.get("lang") ?? "sk") as LanguageCode;
+      const region = (searchParams.get("region") ?? "SK") as RegionCode;
+      const localEdition = (searchParams.get("localEdition") ?? "all") as LocalEdition;
+
+      const result = await getNewsWithMeta({
+        category,
+        language,
+        localEdition,
+        query,
+        refresh,
+        region,
       });
-    },
-  };
 
-  return response;
-}
+      return jsonResponse(result.feed, {
+        headers: {
+          "Cache-Control": refresh
+            ? "no-store"
+            : "public, max-age=60, s-maxage=120, stale-while-revalidate=300",
+          "X-Baky-Cache-State": result.meta.cacheState,
+          "X-Baky-Feed-Updated-At": result.meta.updatedAt,
+          "X-Baky-Source-Mode": result.meta.sourceMode,
+        },
+        status: 200,
+      });
+    } catch (error) {
+      console.error("Error fetching news:", error);
 
-export default async function handler(request: any, response?: any) {
-  const apiRequest = {
-    query: readQuery(request),
-  } satisfies ApiRequestLike;
+      const emptyFeed = {
+        articles: [],
+        editorial: null,
+        localEdition: null,
+      } satisfies NewsFeedResponse;
 
-  if (response?.status && response?.json) {
-    return handleNewsRequest(apiRequest, response);
-  }
-
-  const bufferedResponse = createBufferedApiResponse();
-  await handleNewsRequest(apiRequest, bufferedResponse);
-  return bufferedResponse.toResponse();
-}
+      return jsonResponse(emptyFeed, {
+        headers: {
+          "Cache-Control": "no-store",
+          "X-Baky-Cache-State": "error-empty",
+          "X-Baky-Feed-Updated-At": new Date().toISOString(),
+          "X-Baky-Source-Mode": "error-empty",
+        },
+        status: 200,
+      });
+    }
+  },
+};
