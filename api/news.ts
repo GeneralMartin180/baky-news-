@@ -14,45 +14,6 @@ type FeedCandidate = {
   url: string;
 };
 
-const TOPICS: Record<LanguageCode, Record<Category, string>> = {
-  sk: {
-    business: "ekonomika biznis firmy trhy",
-    entertainment: "kultura film hudba celebrity",
-    general: "slovensko svet spravy",
-    health: "zdravie medicina prevencia",
-    science: "veda vesmir vyskum",
-    sports: "sport futbal hokej tenis",
-    technology: "technologie AI internet software",
-  },
-  en: {
-    business: "business economy markets",
-    entertainment: "entertainment movies music",
-    general: "world news politics",
-    health: "health medicine wellness",
-    science: "science research space",
-    sports: "sports football tennis hockey",
-    technology: "technology AI software internet",
-  },
-  cs: {
-    business: "ekonomika byznys firmy",
-    entertainment: "kultura zabava filmy",
-    general: "cesko svet zpravy",
-    health: "zdravi medicina prevence",
-    science: "veda vyzkum vesmir",
-    sports: "sport fotbal hokej tenis",
-    technology: "technologie AI software internet",
-  },
-  de: {
-    business: "wirtschaft unternehmen maerkte",
-    entertainment: "unterhaltung kultur filme",
-    general: "deutschland welt nachrichten",
-    health: "gesundheit medizin",
-    science: "wissenschaft forschung weltraum",
-    sports: "sport fussball tennis hockey",
-    technology: "technologie KI software internet",
-  },
-};
-
 const LOCAL_EDITIONS: Record<
   Exclude<LocalEdition, "all">,
   Omit<LocalEditionSummary, "id"> & { query: string }
@@ -61,31 +22,31 @@ const LOCAL_EDITIONS: Record<
     badge: "Lokalna edicia",
     description: "Doprava, mesto, skoly, nemocnice a lokalne dianie v Bratislave.",
     label: "Bratislava",
-    query: "Bratislava doprava policia mesto skoly nemocnica kultura",
+    query: "Bratislava Slovakia",
   },
   kosice: {
     badge: "Lokalna edicia",
     description: "Mesto, bezpecnost, verejny priestor a sluzby v Kosiciach.",
     label: "Kosice",
-    query: "Kosice doprava policia mesto skoly nemocnica kultura",
+    query: "Kosice Slovakia",
   },
   presov: {
     badge: "Lokalna edicia",
     description: "Presovsky vyber pre dopravu, kraj, mesto a sluzby.",
     label: "Presov",
-    query: "Presov doprava policia mesto kraj nemocnica kultura",
+    query: "Presov Slovakia",
   },
   "rimavska-sobota": {
     badge: "Lokalna edicia",
     description: "Mesto, okres, sluzby a dianie v Rimavskej Sobote.",
     label: "Rimavska Sobota",
-    query: "Rimavska Sobota doprava policia mesto okres nemocnica kultura",
+    query: "Rimavska Sobota Slovakia",
   },
   vychod: {
     badge: "Regionalny fokus",
     description: "Kosice, Presov a temy s dopadom na vychod Slovenska.",
     label: "Vychod",
-    query: "Kosice Presov vychod Slovenska doprava policia kraj nemocnica",
+    query: "eastern Slovakia Kosice Presov",
   },
 };
 
@@ -108,6 +69,55 @@ const LOCAL_EDITION_IDS = new Set<LocalEdition>([
   "vychod",
 ]);
 const REGIONS = new Set<RegionCode>(["SK", "US", "GB", "CZ", "DE", "AT"]);
+
+const BBC_FEEDS: Record<Category, FeedCandidate[]> = {
+  business: [
+    { label: "BBC Business", url: "https://feeds.bbci.co.uk/news/business/rss.xml" },
+    { label: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+  entertainment: [
+    {
+      label: "BBC Entertainment",
+      url: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
+    },
+    { label: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+  general: [
+    { label: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+    { label: "BBC World", url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
+  ],
+  health: [
+    { label: "BBC Health", url: "https://feeds.bbci.co.uk/news/health/rss.xml" },
+    { label: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+  science: [
+    {
+      label: "BBC Science",
+      url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
+    },
+    { label: "BBC Technology", url: "https://feeds.bbci.co.uk/news/technology/rss.xml" },
+    { label: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+  sports: [
+    { label: "BBC Sport", url: "https://feeds.bbci.co.uk/sport/rss.xml" },
+    { label: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+  technology: [
+    { label: "BBC Technology", url: "https://feeds.bbci.co.uk/news/technology/rss.xml" },
+    { label: "BBC Science", url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" },
+    { label: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+};
+
+const BBC_SEARCH_FEEDS: FeedCandidate[] = [
+  ...BBC_FEEDS.general,
+  ...BBC_FEEDS.business,
+  ...BBC_FEEDS.technology,
+  ...BBC_FEEDS.science,
+  ...BBC_FEEDS.health,
+  ...BBC_FEEDS.sports,
+  ...BBC_FEEDS.entertainment,
+];
 
 function buildJsonResponse(payload: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(payload), {
@@ -168,73 +178,29 @@ function normalizeRegion(value: string | null): RegionCode {
   return REGIONS.has(value as RegionCode) ? (value as RegionCode) : "SK";
 }
 
-function googleSearchUrl(query: string, language: LanguageCode, region: RegionCode) {
-  return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=${language}&gl=${region}&ceid=${region}:${language}`;
-}
-
-function googleTopUrl(language: LanguageCode, region: RegionCode) {
-  return `https://news.google.com/rss?hl=${language}&gl=${region}&ceid=${region}:${language}`;
+function dedupeCandidates(candidates: FeedCandidate[]) {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    if (seen.has(candidate.url)) return false;
+    seen.add(candidate.url);
+    return true;
+  });
 }
 
 function buildCandidates(options: {
   category: Category;
-  language: LanguageCode;
   localEdition: LocalEdition;
   query: string;
-  region: RegionCode;
 }): FeedCandidate[] {
   if (options.query) {
-    return [
-      {
-        label: "google-search",
-        url: googleSearchUrl(options.query, options.language, options.region),
-      },
-      {
-        label: "google-search-en",
-        url: googleSearchUrl(options.query, "en", "US"),
-      },
-    ];
+    return dedupeCandidates(BBC_SEARCH_FEEDS);
   }
 
-  if (
-    options.language === "sk" &&
-    options.region === "SK" &&
-    options.category === "general" &&
-    options.localEdition !== "all"
-  ) {
-    const local = LOCAL_EDITIONS[options.localEdition];
-    return [
-      {
-        label: `google-local-${options.localEdition}`,
-        url: googleSearchUrl(local.query, "sk", "SK"),
-      },
-      {
-        label: "google-top-sk",
-        url: googleTopUrl("sk", "SK"),
-      },
-      {
-        label: "google-general-sk",
-        url: googleSearchUrl(TOPICS.sk.general, "sk", "SK"),
-      },
-    ];
+  if (options.localEdition !== "all" && options.category === "general") {
+    return dedupeCandidates([...BBC_FEEDS.general, ...BBC_FEEDS.business]);
   }
 
-  return [
-    {
-      label: `google-top-${options.language}-${options.region}`,
-      url: options.category === "general"
-        ? googleTopUrl(options.language, options.region)
-        : googleSearchUrl(TOPICS[options.language][options.category], options.language, options.region),
-    },
-    {
-      label: "google-top-sk",
-      url: googleTopUrl("sk", "SK"),
-    },
-    {
-      label: "google-top-en",
-      url: googleTopUrl("en", "US"),
-    },
-  ];
+  return dedupeCandidates([...(BBC_FEEDS[options.category] ?? BBC_FEEDS.general), ...BBC_FEEDS.general]);
 }
 
 function decodeHtml(value: string) {
@@ -257,123 +223,51 @@ function firstMatch(value: string, pattern: RegExp) {
   return decodeHtml(value.match(pattern)?.[1] ?? "");
 }
 
-function normalizeImageUrl(value: string) {
-  let imageUrl = decodeHtml(value);
-  if (!imageUrl) return "";
-  if (imageUrl.startsWith("//")) imageUrl = `https:${imageUrl}`;
-  if (imageUrl.startsWith("http://")) imageUrl = imageUrl.replace("http://", "https://");
-  if (imageUrl.includes("googleusercontent.com")) {
-    imageUrl = `${imageUrl.split("=")[0]}=w1200-h675-p-k-no-nu`;
-  }
-  if (
-    imageUrl.includes("favicon") ||
-    imageUrl.includes("logo") ||
-    imageUrl.includes("gstatic.com") ||
-    imageUrl.includes("news.google.com")
-  ) {
-    return "";
-  }
-  return imageUrl;
-}
-
-function getGoogleNewsArticleId(articleUrl: string) {
-  try {
-    const url = new URL(articleUrl);
-    if (url.hostname !== "news.google.com") return "";
-    const parts = url.pathname.split("/").filter(Boolean);
-    return parts[parts.length - 1] ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function parseGoogleDecodeResponse(value: string) {
-  const line = value
-    .split("\n")
-    .find((part) => part.includes("wrb.fr") && part.includes("garturlres"));
-
-  if (!line) return "";
-
-  try {
-    const parsedLine = JSON.parse(line) as Array<[string, string, string]>;
-    const rawPayload = parsedLine[0]?.[2];
-    if (!rawPayload) return "";
-    const decodedPayload = JSON.parse(rawPayload) as [string, string];
-    return decodedPayload[1] ?? "";
-  } catch {
-    return "";
-  }
-}
-
-async function fetchGoogleDecodeParams(articleId: string) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3000);
-
-  try {
-    const response = await fetch(`https://news.google.com/rss/articles/${articleId}`, {
-      headers: {
-        Accept: "text/html,application/xhtml+xml",
-        "User-Agent": "Mozilla/5.0 BakyNews/1.0",
-      },
-      signal: controller.signal,
-    });
-
-    if (!response.ok) return null;
-    const html = await response.text();
-    const signature = html.match(/data-n-a-sg=["']([^"']+)["']/i)?.[1] ?? "";
-    const timestamp = html.match(/data-n-a-ts=["']([^"']+)["']/i)?.[1] ?? "";
-    if (!signature || !timestamp) return null;
-    return { signature, timestamp };
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function resolveGoogleNewsUrl(articleUrl: string) {
-  const articleId = getGoogleNewsArticleId(articleUrl);
-  if (!articleId) return articleUrl;
-
-  try {
-    const params = await fetchGoogleDecodeParams(articleId);
-    if (!params) return articleUrl;
-
-    const payload = [
-      "Fbv4je",
-      `["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"${articleId}",${params.timestamp},"${params.signature}"]`,
-    ];
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
-    try {
-      const response = await fetch("https://news.google.com/_/DotsSplashUi/data/batchexecute", {
-        body: `f.req=${encodeURIComponent(JSON.stringify([[payload]]))}`,
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-          "User-Agent": "Mozilla/5.0 BakyNews/1.0",
-        },
-        method: "POST",
-        signal: controller.signal,
-      });
-
-      if (!response.ok) return articleUrl;
-      const decodedUrl = parseGoogleDecodeResponse(await response.text());
-      return decodedUrl && decodedUrl.startsWith("http") ? decodedUrl : articleUrl;
-    } finally {
-      clearTimeout(timeout);
-    }
-  } catch {
-    return articleUrl;
-  }
-}
-
 function resolveUrl(value: string, baseUrl: string) {
   try {
     return new URL(value, baseUrl).toString();
   } catch {
     return "";
   }
+}
+
+function normalizeImageUrl(value: string, baseUrl = "") {
+  let imageUrl = decodeHtml(value);
+  if (!imageUrl) return "";
+
+  if (baseUrl) {
+    imageUrl = resolveUrl(imageUrl, baseUrl);
+  }
+
+  if (imageUrl.startsWith("//")) imageUrl = `https:${imageUrl}`;
+  if (imageUrl.startsWith("http://")) imageUrl = imageUrl.replace("http://", "https://");
+  if (imageUrl.includes("ichef.bbci.co.uk")) {
+    imageUrl = imageUrl.replace(/\/ace\/standard\/\d+\//, "/ace/standard/1024/");
+  }
+
+  const lowerImageUrl = imageUrl.toLowerCase();
+  if (
+    lowerImageUrl.includes("favicon") ||
+    lowerImageUrl.includes("logo") ||
+    lowerImageUrl.includes("sprite") ||
+    lowerImageUrl.includes("placeholder") ||
+    lowerImageUrl.includes("gstatic.com")
+  ) {
+    return "";
+  }
+
+  return imageUrl;
+}
+
+function extractImageFromItem(item: string, baseUrl: string) {
+  const image =
+    item.match(/<media:thumbnail[^>]*url=["']([^"']+)["']/i)?.[1] ??
+    item.match(/<media:content[^>]*url=["']([^"']+)["']/i)?.[1] ??
+    item.match(/<enclosure[^>]*url=["']([^"']+)["']/i)?.[1] ??
+    item.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] ??
+    "";
+
+  return normalizeImageUrl(image, baseUrl);
 }
 
 async function extractArticleImage(articleUrl: string) {
@@ -401,7 +295,7 @@ async function extractArticleImage(articleUrl: string) {
       html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i)?.[1] ??
       "";
 
-    return normalizeImageUrl(resolveUrl(image, articleUrl));
+    return normalizeImageUrl(image, articleUrl);
   } catch {
     return "";
   } finally {
@@ -409,7 +303,7 @@ async function extractArticleImage(articleUrl: string) {
   }
 }
 
-function parseItems(xml: string, sourceLabel: string): NewsArticle[] {
+function parseItems(xml: string, candidate: FeedCandidate): NewsArticle[] {
   const items = Array.from(xml.matchAll(/<item\b[\s\S]*?<\/item>/g)).map((match) => match[0]);
 
   return items
@@ -418,12 +312,7 @@ function parseItems(xml: string, sourceLabel: string): NewsArticle[] {
       const link = firstMatch(item, /<link[^>]*>([\s\S]*?)<\/link>/i);
       const pubDate = firstMatch(item, /<pubDate[^>]*>([\s\S]*?)<\/pubDate>/i);
       const descriptionMarkup = firstMatch(item, /<description[^>]*>([\s\S]*?)<\/description>/i);
-      const mediaImage =
-        item.match(/<media:content[^>]*url=["']([^"']+)["']/i)?.[1] ??
-        item.match(/<enclosure[^>]*url=["']([^"']+)["']/i)?.[1] ??
-        "";
-      const descriptionImage = descriptionMarkup.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] ?? "";
-      const title = rawTitle.split(" - ")[0]?.trim() || rawTitle.trim();
+      const title = rawTitle.trim();
 
       if (!title || !link) {
         return null;
@@ -434,25 +323,67 @@ function parseItems(xml: string, sourceLabel: string): NewsArticle[] {
         title,
         description:
           description.length > 8
-            ? `${description.slice(0, 220)}${description.length > 220 ? "..." : ""}`
+            ? `${description.slice(0, 240)}${description.length > 240 ? "..." : ""}`
             : "Kliknite pre zobrazenie celeho clanku a podrobnosti.",
         url: link,
-        urlToImage: normalizeImageUrl(mediaImage || descriptionImage),
+        urlToImage: extractImageFromItem(item, link || candidate.url),
         publishedAt: pubDate || new Date().toUTCString(),
         source: {
-          name: sourceLabel,
+          name: candidate.label,
         },
       } satisfies NewsArticle;
     })
     .filter((article): article is NewsArticle => Boolean(article));
 }
 
+function normalizeText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function filterArticlesByQuery(articles: NewsArticle[], query: string, localEdition: LocalEdition) {
+  const activeQuery = localEdition !== "all" && !query ? LOCAL_EDITIONS[localEdition]?.query ?? "" : query;
+  const tokens = normalizeText(activeQuery)
+    .split(" ")
+    .filter((token) => token.length > 2);
+
+  if (!tokens.length) {
+    return articles;
+  }
+
+  const matches = articles.filter((article) => {
+    const haystack = normalizeText(`${article.title} ${article.description} ${article.source.name}`);
+    return tokens.some((token) => haystack.includes(token));
+  });
+
+  return matches.length ? matches : articles;
+}
+
 function dedupeArticles(articles: NewsArticle[]) {
-  const seen = new Set<string>();
+  const seenUrls = new Set<string>();
+  const seenTitles = new Set<string>();
+
   return articles.filter((article) => {
-    const key = article.url.toLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
+    let urlKey = article.url.toLowerCase();
+    try {
+      const parsed = new URL(article.url);
+      urlKey = `${parsed.hostname}${parsed.pathname}`.toLowerCase();
+    } catch {
+      urlKey = article.url.toLowerCase();
+    }
+
+    const titleKey = normalizeText(article.title);
+    if (seenUrls.has(urlKey) || (titleKey.length > 24 && seenTitles.has(titleKey))) {
+      return false;
+    }
+
+    seenUrls.add(urlKey);
+    seenTitles.add(titleKey);
     return true;
   });
 }
@@ -474,7 +405,7 @@ async function fetchCandidate(candidate: FeedCandidate) {
       throw new Error(`Feed failed with ${response.status}`);
     }
 
-    return parseItems(await response.text(), candidate.label);
+    return parseItems(await response.text(), candidate);
   } finally {
     clearTimeout(timeout);
   }
@@ -484,6 +415,7 @@ async function backfillImages(articles: NewsArticle[]) {
   const result = [...articles];
   const indexes = articles
     .map((article, index) => ({ article, index }))
+    .filter(({ article }) => !article.urlToImage)
     .slice(0, 8);
 
   let cursor = 0;
@@ -492,11 +424,9 @@ async function backfillImages(articles: NewsArticle[]) {
       const current = indexes[cursor];
       cursor += 1;
 
-      const resolvedUrl = await resolveGoogleNewsUrl(current.article.url);
-      const image = current.article.urlToImage || (await extractArticleImage(resolvedUrl));
+      const image = await extractArticleImage(current.article.url);
       result[current.index] = {
         ...current.article,
-        url: resolvedUrl,
         urlToImage: image,
       };
     }
@@ -506,19 +436,24 @@ async function backfillImages(articles: NewsArticle[]) {
   return result;
 }
 
-async function fetchArticles(candidates: FeedCandidate[]) {
+async function fetchArticles(candidates: FeedCandidate[], query: string, localEdition: LocalEdition) {
+  const fetchedArticles: NewsArticle[] = [];
+
   for (const candidate of candidates) {
     try {
       const articles = await fetchCandidate(candidate);
-      if (articles.length) {
-        return backfillImages(dedupeArticles(articles).slice(0, 24));
+      fetchedArticles.push(...articles);
+
+      if (!query && fetchedArticles.length >= 28) {
+        break;
       }
     } catch (error) {
-      console.warn(`Vercel feed candidate failed (${candidate.label})`, error);
+      console.warn(`Vercel BBC feed candidate failed (${candidate.label})`, error);
     }
   }
 
-  return [];
+  const filtered = filterArticlesByQuery(dedupeArticles(fetchedArticles), query, localEdition);
+  return backfillImages(filtered.slice(0, 24));
 }
 
 function buildLocalEditionSummary(
@@ -554,12 +489,12 @@ function buildEditorial(
   }
 
   const headline = query
-    ? `Tema "${query}" napriec zdrojmi`
+    ? `Tema "${query}" cez BBC News`
     : localEdition
-    ? `${localEdition.label}: lokalny prehlad`
+    ? `${localEdition.label}: BBC globalny kontext`
     : category === "general"
-    ? "Hlavne spravy v jednom prehlade"
-    : "Vyber sprav v jednom prehlade";
+    ? "Hlavne spravy cez BBC News"
+    : "Vyber sprav cez BBC News";
 
   return {
     headline,
@@ -572,8 +507,8 @@ function buildEditorial(
     topTopics: [],
     watchlist: articles.slice(0, 3).map((article) => article.title),
     whyItMatters: localEdition
-      ? "Feed uprednostnuje lokalne temy a ich prakticky dopad."
-      : "Feed zdruzuje hlavne linky z aktualnych zdrojov do jedneho prehladu.",
+      ? "BBC nema lokalny slovensky feed, preto lokalna edicia iba filtruje globalny BBC mix podla mesta alebo regionu."
+      : "Feed ide priamo z BBC RSS.",
   };
 }
 
@@ -590,11 +525,11 @@ export default async function handler(request: any, response?: any) {
     const articles = await fetchArticles(
       buildCandidates({
         category,
-        language,
         localEdition,
         query,
-        region,
-      })
+      }),
+      query,
+      localEdition
     );
 
     const feed = {
@@ -605,12 +540,12 @@ export default async function handler(request: any, response?: any) {
 
     return sendJson(response, feed, 200, {
       "Cache-Control": "public, max-age=60, s-maxage=180, stale-while-revalidate=600",
-      "X-Baky-Cache-State": "vercel-light",
+      "X-Baky-Cache-State": "vercel-bbc",
       "X-Baky-Feed-Updated-At": new Date().toISOString(),
-      "X-Baky-Source-Mode": "vercel-light-rss",
+      "X-Baky-Source-Mode": "bbc-rss",
     });
   } catch (error) {
-    console.error("Vercel lightweight news handler failed:", error);
+    console.error("Vercel BBC news handler failed:", error);
     const emptyFeed = {
       articles: [],
       editorial: null,
@@ -621,7 +556,7 @@ export default async function handler(request: any, response?: any) {
       "Cache-Control": "no-store",
       "X-Baky-Cache-State": "vercel-error-empty",
       "X-Baky-Feed-Updated-At": new Date().toISOString(),
-      "X-Baky-Source-Mode": "vercel-error-empty",
+      "X-Baky-Source-Mode": "bbc-error-empty",
     });
   }
 }

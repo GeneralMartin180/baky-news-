@@ -15,7 +15,14 @@ import type {
 } from "../src/types";
 
 const cache = new NodeCache({ stdTTL: 600 });
-const parser = new Parser<any, any>();
+const parser = new Parser<any, any>({
+  customFields: {
+    item: [
+      ["media:content", "mediaContent", { keepArray: true }],
+      ["media:thumbnail", "mediaThumbnail", { keepArray: true }],
+    ],
+  },
+});
 
 type PreparedFeedEntry = {
   expiresAtMs: number;
@@ -121,44 +128,47 @@ const SUPPORTED_LOCAL_EDITIONS: LocalEdition[] = [
 ];
 const SUPPORTED_REGIONS: RegionCode[] = ["SK", "US", "GB", "CZ", "DE", "AT"];
 
-const GOOGLE_NEWS_TOPICS: Record<LanguageCode, Record<Category, string>> = {
-  sk: {
-    business: "ekonomika biznis firmy trhy",
-    entertainment: "celebrity kultura hudba film showbiznis",
-    general: "slovensko svet spravy",
-    health: "zdravie medicina prevencia vyziva choroby",
-    science: "veda vesmir vyskum objavy technologie",
-    sports: "sport slovensko futbal hokej tenis",
-    technology: "technologie AI internet mobily software",
-  },
-  en: {
-    business: "business economy markets companies finance",
-    entertainment: "entertainment movies music streaming celebrities",
-    general: "world news politics current events",
-    health: "health medicine wellness prevention public health",
-    science: "science research space discoveries innovation",
-    sports: "sports football soccer basketball tennis hockey",
-    technology: "technology AI startups gadgets software internet",
-  },
-  cs: {
-    business: "ekonomika byznys firmy trhy finance",
-    entertainment: "kultura zabava filmy hudba celebrity",
-    general: "cesko svet zpravy politika",
-    health: "zdravi medicina prevence vyziva",
-    science: "veda vyzkum vesmir objevy technologie",
-    sports: "sport fotbal hokej tenis",
-    technology: "technologie AI internet mobily software",
-  },
-  de: {
-    business: "wirtschaft unternehmen maerkte finanzen",
-    entertainment: "unterhaltung kultur filme musik streaming",
-    general: "deutschland welt nachrichten politik",
-    health: "gesundheit medizin praevention ernahrung",
-    science: "wissenschaft forschung weltraum entdeckungen technologie",
-    sports: "sport fussball tennis basketball hockey",
-    technology: "technologie KI internet software gadgets",
-  },
+const BBC_FEEDS: Record<Category, FeedCandidate[]> = {
+  business: [
+    { label: "bbc-business", url: "https://feeds.bbci.co.uk/news/business/rss.xml" },
+    { label: "bbc-news", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+  entertainment: [
+    { label: "bbc-entertainment", url: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml" },
+    { label: "bbc-news", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+  general: [
+    { label: "bbc-news", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+    { label: "bbc-world", url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
+  ],
+  health: [
+    { label: "bbc-health", url: "https://feeds.bbci.co.uk/news/health/rss.xml" },
+    { label: "bbc-news", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+  science: [
+    { label: "bbc-science", url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" },
+    { label: "bbc-technology", url: "https://feeds.bbci.co.uk/news/technology/rss.xml" },
+    { label: "bbc-news", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+  sports: [
+    { label: "bbc-sport", url: "https://feeds.bbci.co.uk/sport/rss.xml" },
+    { label: "bbc-news", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+  technology: [
+    { label: "bbc-technology", url: "https://feeds.bbci.co.uk/news/technology/rss.xml" },
+    { label: "bbc-science", url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" },
+    { label: "bbc-news", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
 };
+const BBC_SEARCH_FEEDS: FeedCandidate[] = [
+  ...BBC_FEEDS.general,
+  ...BBC_FEEDS.business,
+  ...BBC_FEEDS.technology,
+  ...BBC_FEEDS.science,
+  ...BBC_FEEDS.health,
+  ...BBC_FEEDS.sports,
+  ...BBC_FEEDS.entertainment,
+];
 
 const CATEGORY_PAGE_CONFIG: Record<string, CategoryPageConfig> = {
   science: {
@@ -469,19 +479,16 @@ function getLocalEditionSummary(
   };
 }
 
-function buildGoogleNewsUrl(
-  query: string,
-  language: LanguageCode,
-  region: RegionCode
-): string {
-  return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=${language}&gl=${region}&ceid=${region}:${language}`;
-}
+function dedupeFeedCandidates(candidates: FeedCandidate[]): FeedCandidate[] {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    if (seen.has(candidate.url)) {
+      return false;
+    }
 
-function buildGoogleNewsTopHeadlinesUrl(
-  language: LanguageCode,
-  region: RegionCode
-): string {
-  return `https://news.google.com/rss?hl=${language}&gl=${region}&ceid=${region}:${language}`;
+    seen.add(candidate.url);
+    return true;
+  });
 }
 
 function buildLocalEditionCandidates(
@@ -499,10 +506,7 @@ function buildLocalEditionCandidates(
   }
 
   return [
-    {
-      label: `google-local-${localEdition}`,
-      url: buildGoogleNewsUrl(`${config.query} ${GOOGLE_NEWS_TOPICS.sk.general}`, language, region),
-    },
+    ...dedupeFeedCandidates([...BBC_FEEDS.general, ...BBC_FEEDS.business]),
   ];
 }
 
@@ -513,86 +517,43 @@ function buildFeedCandidates(
   region: RegionCode = DEFAULT_REGION
 ): FeedCandidate[] {
   if (query) {
-    return [
-      {
-        label: `google-search-${language}-${region}`,
-        url: buildGoogleNewsUrl(query, language, region),
-      },
-    ];
+    return dedupeFeedCandidates(BBC_SEARCH_FEEDS);
   }
 
   if (!isSlovakEdition(language, region)) {
-    return [
-      {
-        label: `google-${category}-${language}-${region}`,
-        url: buildGoogleNewsUrl(GOOGLE_NEWS_TOPICS[language][category], language, region),
-      },
-    ];
+    return dedupeFeedCandidates([...(BBC_FEEDS[category] ?? BBC_FEEDS.general), ...BBC_FEEDS.general]);
   }
 
   switch (category) {
     case "technology":
       return [
         { label: "zive", url: "https://zive.aktuality.sk/rss/najnovsie/" },
-        {
-          label: "google-tech",
-          url: buildGoogleNewsUrl(GOOGLE_NEWS_TOPICS[language].technology, language, region),
-        }
+        ...BBC_FEEDS.technology,
       ];
     case "business":
       return [
         { label: "aktuality-business", url: "https://www.aktuality.sk/rss/ekonomika/" },
-        {
-          label: "google-business",
-          url: buildGoogleNewsUrl(GOOGLE_NEWS_TOPICS[language].business, language, region),
-        }
+        ...BBC_FEEDS.business,
       ];
     case "sports":
       return [
         { label: "sport", url: "https://sport.aktuality.sk/rss/" },
-        {
-          label: "google-sports",
-          url: buildGoogleNewsUrl(GOOGLE_NEWS_TOPICS[language].sports, language, region),
-        }
+        ...BBC_FEEDS.sports,
       ];
     case "science":
-      return [
-        {
-          label: "google-science",
-          url: buildGoogleNewsUrl(GOOGLE_NEWS_TOPICS[language].science, language, region),
-        },
-      ];
+      return BBC_FEEDS.science;
     case "entertainment":
       return [
         { label: "aktuality-koktejl", url: "https://www.aktuality.sk/rss/koktejl/" },
-        {
-          label: "google-entertainment",
-          url: buildGoogleNewsUrl(
-            GOOGLE_NEWS_TOPICS[language].entertainment,
-            language,
-            region
-          ),
-        }
+        ...BBC_FEEDS.entertainment,
       ];
     case "health":
-      return [
-        {
-          label: "google-health",
-          url: buildGoogleNewsUrl(GOOGLE_NEWS_TOPICS[language].health, language, region),
-        },
-      ];
+      return BBC_FEEDS.health;
     case "general":
     default:
       return [
         { label: "aktuality-general", url: "https://www.aktuality.sk/rss/" },
-        {
-          label: "google-top-sk",
-          url: buildGoogleNewsTopHeadlinesUrl(language, region),
-        },
-        {
-          label: "google-general",
-          url: buildGoogleNewsUrl(GOOGLE_NEWS_TOPICS[language].general, language, region),
-        }
+        ...BBC_FEEDS.general,
       ];
   }
 }
@@ -602,20 +563,7 @@ function buildEmergencyFeedCandidates(
   language: LanguageCode = DEFAULT_LANGUAGE,
   region: RegionCode = DEFAULT_REGION
 ): FeedCandidate[] {
-  return [
-    {
-      label: `google-top-${language}-${region}`,
-      url: buildGoogleNewsTopHeadlinesUrl(language, region),
-    },
-    {
-      label: "google-top-en-us",
-      url: buildGoogleNewsTopHeadlinesUrl("en", "US"),
-    },
-    {
-      label: `google-emergency-${category}`,
-      url: buildGoogleNewsUrl(GOOGLE_NEWS_TOPICS.en[category] ?? GOOGLE_NEWS_TOPICS.en.general, "en", "US"),
-    },
-  ];
+  return dedupeFeedCandidates([...(BBC_FEEDS[category] ?? BBC_FEEDS.general), ...BBC_FEEDS.general]);
 }
 
 function getCategoryPageConfig(
@@ -674,6 +622,10 @@ function normalizeImageUrl(rawUrl: string): string {
   if (imageUrl.includes("googleusercontent.com")) {
     const base = imageUrl.split("=")[0];
     imageUrl = `${base}=w1600-h900-p-k-no-nu`;
+  }
+
+  if (imageUrl.includes("ichef.bbci.co.uk")) {
+    imageUrl = imageUrl.replace(/\/ace\/standard\/\d+\//, "/ace/standard/1024/");
   }
 
   if (imageUrl.includes("cmestatic.com")) {
@@ -746,6 +698,7 @@ function isJunkImage(imageUrl: string): boolean {
 }
 
 function getFallbackSourceName(label: string): string {
+  if (label.includes("bbc")) return label.includes("sport") ? "BBC Sport" : "BBC News";
   if (label.includes("zive")) return "Zive.sk";
   if (label.includes("sport")) return "Sport.sk";
   if (label.includes("aktuality")) return "Aktuality.sk";
@@ -1322,12 +1275,20 @@ function mapFeedItems(candidate: FeedCandidate, feed: any): NewsArticle[] {
       const itemContent = item.content || item["content:encoded"] || "";
       let imageUrl = item.enclosure?.url || "";
 
-      if (!imageUrl && item["media:content"]) {
-        const mediaContent = item["media:content"];
+      if (!imageUrl && (item.mediaContent || item["media:content"])) {
+        const mediaContent = item.mediaContent || item["media:content"];
         imageUrl =
           (Array.isArray(mediaContent)
             ? mediaContent[mediaContent.length - 1]?.$?.url
             : mediaContent.$?.url || mediaContent.url) || "";
+      }
+
+      if (!imageUrl && (item.mediaThumbnail || item["media:thumbnail"])) {
+        const mediaThumbnail = item.mediaThumbnail || item["media:thumbnail"];
+        imageUrl =
+          (Array.isArray(mediaThumbnail)
+            ? mediaThumbnail[mediaThumbnail.length - 1]?.$?.url
+            : mediaThumbnail.$?.url || mediaThumbnail.url) || "";
       }
 
       if (!imageUrl) {
@@ -1375,7 +1336,47 @@ function mapFeedItems(candidate: FeedCandidate, feed: any): NewsArticle[] {
     });
 }
 
-async function fetchCandidateArticles(candidates: FeedCandidate[]) {
+function filterCandidateArticlesByQuery(articles: NewsArticle[], query: string): NewsArticle[] {
+  const tokens = normalizeTitleKey(query)
+    .split(" ")
+    .filter((token) => token.length > 2);
+
+  if (!tokens.length) {
+    return articles;
+  }
+
+  const matches = articles.filter((article) => {
+    const haystack = normalizeTitleKey(`${article.title} ${article.description} ${article.source.name}`);
+    return tokens.some((token) => haystack.includes(token));
+  });
+
+  return matches.length ? matches : articles;
+}
+
+async function fetchCandidateArticles(candidates: FeedCandidate[], query = "") {
+  if (query) {
+    const articles: NewsArticle[] = [];
+    let lastError: unknown;
+
+    for (const candidate of candidates) {
+      try {
+        const result = await fetchFeed([candidate]);
+        articles.push(...mapFeedItems(result.candidate, result.feed));
+        if (articles.length >= 60) {
+          break;
+        }
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (!articles.length) {
+      throw lastError ?? new Error("No feed candidate succeeded");
+    }
+
+    return filterCandidateArticlesByQuery(articles, query);
+  }
+
   const { candidate, feed } = await fetchFeed(candidates);
   return mapFeedItems(candidate, feed);
 }
@@ -1539,7 +1540,7 @@ async function buildNewsFeedResponse(
     let primaryArticles: NewsArticle[] = [];
 
     try {
-      primaryArticles = await fetchCandidateArticles(primaryCandidates);
+      primaryArticles = await fetchCandidateArticles(primaryCandidates, options.searchQuery);
     } catch (primaryError) {
       console.warn(
         `Primary feed candidates failed for ${options.requestedCategory}, trying emergency fallback.`,
@@ -1551,7 +1552,8 @@ async function buildNewsFeedResponse(
           options.requestedCategory,
           options.normalizedLanguage,
           options.normalizedRegion
-        )
+        ),
+        options.searchQuery
       );
       sourceMode = "rss-fallback";
     }
@@ -1563,7 +1565,8 @@ async function buildNewsFeedResponse(
             options.normalizedLocalEdition,
             options.normalizedLanguage,
             options.normalizedRegion
-          )
+          ),
+          LOCAL_EDITIONS[options.normalizedLocalEdition]?.query ?? ""
         );
         articles = [...localArticles, ...primaryArticles];
         sourceMode = "rss+local";
