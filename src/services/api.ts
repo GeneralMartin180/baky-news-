@@ -20,6 +20,7 @@ export async function fetchNews(
     }
 
     url.searchParams.append('category', category);
+    url.searchParams.append('imageQuality', 'article-og-v2');
     if (settings?.language) {
       url.searchParams.append('lang', settings.language);
     }

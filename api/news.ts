@@ -30,6 +30,15 @@ type ImageCandidate = {
   width: number;
 };
 
+type NormalizeImageOptions = {
+  preservePulseTransform?: boolean;
+};
+
+const ARTICLE_IMAGE_CACHE_MS = 60 * 60 * 1000;
+const ARTICLE_IMAGE_ENRICHMENT_LIMIT = 12;
+const ARTICLE_IMAGE_TIMEOUT_MS = 3000;
+const articleImageCache = new Map<string, { expiresAt: number; imageUrl: string }>();
+
 const CATEGORIES = new Set<Category>([
   "business",
   "entertainment",
@@ -286,7 +295,7 @@ function extractPulseCmsImage(value: string) {
   return "";
 }
 
-function normalizeImageUrl(value: string, baseUrl = "") {
+function normalizeImageUrl(value: string, baseUrl = "", options: NormalizeImageOptions = {}) {
   let imageUrl = decodeHtml(value);
   if (!imageUrl) return "";
 
@@ -298,9 +307,11 @@ function normalizeImageUrl(value: string, baseUrl = "") {
 
   if (imageUrl.startsWith("http://")) imageUrl = imageUrl.replace("http://", "https://");
 
-  const pulseCmsImage = extractPulseCmsImage(imageUrl);
-  if (pulseCmsImage) {
-    imageUrl = pulseCmsImage;
+  if (!options.preservePulseTransform) {
+    const pulseCmsImage = extractPulseCmsImage(imageUrl);
+    if (pulseCmsImage) {
+      imageUrl = pulseCmsImage;
+    }
   }
 
   if (imageUrl.includes("ichef.bbci.co.uk")) {
@@ -364,6 +375,114 @@ function extractBestSrcsetUrl(rawSrcset: string) {
 
   candidates.sort((left, right) => right.width - left.width);
   return candidates[0]?.url ?? "";
+}
+
+function extractArticleImageCandidates(html: string) {
+  const candidates: string[] = [];
+  const metaNames = new Set(["og:image", "og:image:secure_url", "twitter:image", "image"]);
+
+  for (const tag of html.match(/<meta\b[^>]*>/gi) ?? []) {
+    const key = (
+      extractAttribute(tag, "property") ||
+      extractAttribute(tag, "name") ||
+      extractAttribute(tag, "itemprop")
+    ).toLowerCase();
+
+    if (metaNames.has(key)) {
+      candidates.push(extractAttribute(tag, "content"));
+    }
+  }
+
+  for (const tag of html.match(/<link\b[^>]*>/gi) ?? []) {
+    if (extractAttribute(tag, "rel").toLowerCase() === "image_src") {
+      candidates.push(extractAttribute(tag, "href"));
+    }
+  }
+
+  for (const tag of html.match(/<source\b[^>]*>/gi) ?? []) {
+    candidates.push(
+      extractBestSrcsetUrl(extractAttribute(tag, "srcset") || extractAttribute(tag, "data-srcset"))
+    );
+  }
+
+  for (const tag of html.match(/<img\b[^>]*>/gi) ?? []) {
+    candidates.push(
+      extractAttribute(tag, "data-src") ||
+        extractAttribute(tag, "data-lazy-src") ||
+        extractBestSrcsetUrl(extractAttribute(tag, "srcset")) ||
+        extractAttribute(tag, "src")
+    );
+  }
+
+  return candidates.filter(Boolean);
+}
+
+async function extractPrimaryArticleImage(articleUrl: string) {
+  const now = Date.now();
+  const cached = articleImageCache.get(articleUrl);
+  if (cached && cached.expiresAt > now) {
+    return cached.imageUrl;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ARTICLE_IMAGE_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(articleUrl, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "sk-SK,sk;q=0.9,en;q=0.8",
+        "User-Agent": "Mozilla/5.0 BakyNews/1.0",
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Article image failed with ${response.status}`);
+    }
+
+    const html = await response.text();
+    for (const candidate of extractArticleImageCandidates(html)) {
+      const normalized = normalizeImageUrl(candidate, articleUrl, { preservePulseTransform: true });
+      if (normalized) {
+        articleImageCache.set(articleUrl, {
+          expiresAt: now + ARTICLE_IMAGE_CACHE_MS,
+          imageUrl: normalized,
+        });
+        return normalized;
+      }
+    }
+  } catch (error) {
+    console.warn(`Article image enrichment failed (${articleUrl})`, error);
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  articleImageCache.set(articleUrl, {
+    expiresAt: now + 10 * 60 * 1000,
+    imageUrl: "",
+  });
+  return "";
+}
+
+async function enrichGeneralArticleImages(
+  articles: NewsArticle[],
+  category: Category,
+  query: string
+) {
+  if (category !== "general" || query) {
+    return articles;
+  }
+
+  const priorityArticles = articles.slice(0, ARTICLE_IMAGE_ENRICHMENT_LIMIT);
+  const enrichedPriorityArticles = await Promise.all(
+    priorityArticles.map(async (article) => {
+      const articleImage = await extractPrimaryArticleImage(article.url);
+      return articleImage ? { ...article, urlToImage: articleImage } : article;
+    })
+  );
+
+  return [...enrichedPriorityArticles, ...articles.slice(ARTICLE_IMAGE_ENRICHMENT_LIMIT)];
 }
 
 function addImageCandidate(
@@ -555,7 +674,12 @@ async function fetchCandidate(candidate: FeedCandidate) {
   }
 }
 
-async function fetchArticles(candidates: FeedCandidate[], query: string, localEdition: LocalEdition) {
+async function fetchArticles(
+  candidates: FeedCandidate[],
+  query: string,
+  localEdition: LocalEdition,
+  category: Category
+) {
   const fetchedArticles: NewsArticle[] = [];
   let sourceMode = "rss";
 
@@ -575,9 +699,10 @@ async function fetchArticles(candidates: FeedCandidate[], query: string, localEd
     }
   }
 
-  const ranked = rankArticles(dedupeArticles(fetchedArticles), localEdition, query);
+  const ranked = rankArticles(dedupeArticles(fetchedArticles), localEdition, query).slice(0, 36);
+  const articles = await enrichGeneralArticleImages(ranked, category, query);
   return {
-    articles: ranked.slice(0, 36),
+    articles,
     sourceMode,
   };
 }
@@ -656,7 +781,8 @@ export default async function handler(request: any, response?: any) {
         region,
       }),
       query,
-      localEdition
+      localEdition,
+      category
     );
 
     const feed = {
@@ -666,7 +792,7 @@ export default async function handler(request: any, response?: any) {
     } satisfies NewsFeedResponse;
 
     return sendJson(response, feed, 200, {
-      "Cache-Control": refresh
+      "Cache-Control": refresh || category === "general"
         ? "no-store"
         : "public, max-age=60, s-maxage=180, stale-while-revalidate=600",
       "X-Baky-Cache-State": "standalone",
