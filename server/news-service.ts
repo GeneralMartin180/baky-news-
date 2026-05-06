@@ -245,7 +245,6 @@ const FEED_STALE_TTL_MS = 12 * 60 * 1000;
 const PREWARM_INTERVAL_MS = 3 * 60 * 1000;
 const SEARCH_IMAGE_ENRICHMENT_LIMIT = IS_VERCEL_RUNTIME ? 4 : 8;
 const ARTICLE_ENRICHMENT_CONCURRENCY = IS_VERCEL_RUNTIME ? 3 : 8;
-const GOOGLE_NEWS_TIMEOUT_MS = IS_VERCEL_RUNTIME ? 4000 : 7000;
 const ARTICLE_IMAGE_TIMEOUT_MS = IS_VERCEL_RUNTIME ? 4000 : 7000;
 const preparedFeeds = new Map<string, PreparedFeedEntry>();
 const inflightFeedRefreshes = new Map<string, Promise<PreparedFeedEntry>>();
@@ -619,11 +618,6 @@ function normalizeImageUrl(rawUrl: string): string {
     imageUrl = pulseCmsImage;
   }
 
-  if (imageUrl.includes("googleusercontent.com")) {
-    const base = imageUrl.split("=")[0];
-    imageUrl = `${base}=w1600-h900-p-k-no-nu`;
-  }
-
   if (imageUrl.includes("ichef.bbci.co.uk")) {
     imageUrl = imageUrl.replace(/\/ace\/standard\/\d+\//, "/ace/standard/1024/");
   }
@@ -682,13 +676,9 @@ function isJunkImage(imageUrl: string): boolean {
   }
 
   return (
-    hostname.includes("googleusercontent.com") ||
-    hostname.includes("gstatic.com") ||
-    hostname === "news.google.com" ||
     imageUrl.includes("favicon") ||
     imageUrl.includes("/logo-fixed") ||
     imageUrl.includes("/mobile-logo") ||
-    imageUrl.includes("google_news") ||
     imageUrl.includes("/logo/") ||
     imageUrl.includes("tracking") ||
     imageUrl.includes("pixel") ||
@@ -888,153 +878,6 @@ function shouldEnhanceArticleImage(articleUrl: string, imageUrl: string): boolea
     return Boolean(imageSize && (imageSize.width < 500 || imageSize.height < 280));
   } catch {
     return false;
-  }
-}
-
-function getGoogleNewsArticleId(articleUrl: string): string | null {
-  try {
-    const url = new URL(articleUrl);
-    const pathParts = url.pathname.split("/").filter(Boolean);
-    const kind = pathParts[pathParts.length - 2];
-    const articleId = pathParts[pathParts.length - 1];
-
-    if (
-      url.hostname === "news.google.com" &&
-      articleId &&
-      (kind === "articles" || kind === "read")
-    ) {
-      return articleId;
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
-}
-
-function parseGoogleNewsDecodeResponse(responseBody: string): string | null {
-  const lines = responseBody
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const payloadLine = lines.find((line) => line.includes("wrb.fr") && line.includes("garturlres"));
-
-  if (!payloadLine) {
-    return null;
-  }
-
-  try {
-    const parsedLine = JSON.parse(payloadLine) as Array<[string, string, string]>;
-    const rawPayload = parsedLine[0]?.[2];
-    if (!rawPayload) {
-      return null;
-    }
-
-    const decodedPayload = JSON.parse(rawPayload) as [string, string];
-    return decodedPayload[1] || null;
-  } catch {
-    return null;
-  }
-}
-
-async function getGoogleNewsDecodingParams(base64Str: string) {
-  const fetchParams = async (url: string) => {
-    const response = await fetchWithRetry(
-      url,
-      {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-          "Accept-Language": "en-US,en;q=0.9"
-        }
-      },
-      1,
-      [GOOGLE_NEWS_TIMEOUT_MS]
-    );
-
-    const $ = cheerio.load(response.data);
-    const dataElement = $("c-wiz > div[jscontroller]").first();
-    if (!dataElement.length) {
-      return null;
-    }
-
-    const signature = dataElement.attr("data-n-a-sg");
-    const timestamp = dataElement.attr("data-n-a-ts");
-    if (!signature || !timestamp) {
-      return null;
-    }
-
-    return { signature, timestamp };
-  };
-
-  const candidateUrls = [
-    `https://news.google.com/rss/articles/${base64Str}`,
-    `https://news.google.com/articles/${base64Str}`,
-  ];
-
-  for (const candidateUrl of candidateUrls) {
-    try {
-      const params = await fetchParams(candidateUrl);
-      if (params) {
-        return params;
-      }
-    } catch {
-      continue;
-    }
-  }
-
-  return null;
-}
-
-async function resolveGoogleNewsArticleUrl(articleUrl: string): Promise<string> {
-  const articleId = getGoogleNewsArticleId(articleUrl);
-  if (!articleId) {
-    return articleUrl;
-  }
-
-  const cacheKey = `google-news-url-${articleId}`;
-  const cachedUrl = cache.get<string>(cacheKey);
-  if (typeof cachedUrl === "string") {
-    return cachedUrl || articleUrl;
-  }
-
-  try {
-    const params = await getGoogleNewsDecodingParams(articleId);
-    if (!params) {
-      cache.set(cacheKey, "", 600);
-      return articleUrl;
-    }
-
-    const payload = [
-      "Fbv4je",
-      `["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"${articleId}",${params.timestamp},"${params.signature}"]`,
-    ];
-
-    const response = await axios.post(
-      "https://news.google.com/_/DotsSplashUi/data/batchexecute",
-      `f.req=${encodeURIComponent(JSON.stringify([[payload]]))}`,
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-        },
-        timeout: GOOGLE_NEWS_TIMEOUT_MS,
-      }
-    );
-
-    const decodedUrl = parseGoogleNewsDecodeResponse(String(response.data));
-    if (!decodedUrl || !isUrlSafe(decodedUrl)) {
-      cache.set(cacheKey, "", 600);
-      return articleUrl;
-    }
-
-    cache.set(cacheKey, decodedUrl, 3600);
-    return decodedUrl;
-  } catch (error) {
-    console.warn(`Nepodarilo sa dekodovat Google News URL: ${articleUrl}`, error);
-    cache.set(cacheKey, "", 600);
-    return articleUrl;
   }
 }
 
@@ -1302,14 +1145,6 @@ function mapFeedItems(candidate: FeedCandidate, feed: any): NewsArticle[] {
       imageUrl = normalizeImageUrl(imageUrl);
       if (isJunkImage(imageUrl)) {
         imageUrl = "";
-      }
-
-      if (candidate.url.includes("news.google.com") && imageUrl) {
-        if (itemDescription.toLowerCase().includes(imageUrl.toLowerCase()) && itemDescription.includes("Source:")) {
-          if (imageUrl.includes("lh3.googleusercontent.com") && (imageUrl.includes("=s") || imageUrl.length < 100)) {
-            imageUrl = "";
-          }
-        }
       }
 
       const cleanDescription = sanitizeDescription(
@@ -1726,8 +1561,7 @@ async function enrichArticles(
       .filter(
         (article) =>
           !article.urlToImage ||
-          shouldEnhanceArticleImage(article.url, article.urlToImage) ||
-          Boolean(getGoogleNewsArticleId(article.url))
+          shouldEnhanceArticleImage(article.url, article.urlToImage)
       )
       .slice(0, enrichmentLimit)
       .map((article) => article.url)
@@ -1748,15 +1582,7 @@ async function enrichArticles(
 
         try {
           const article = current.article;
-          const isGoogleWrappedUrl = Boolean(getGoogleNewsArticleId(article.url));
-          const resolvedUrl = isGoogleWrappedUrl
-            ? await resolveGoogleNewsArticleUrl(article.url)
-            : article.url;
-
-          if (isGoogleWrappedUrl && resolvedUrl === article.url && !article.urlToImage) {
-            result[current.index] = article;
-            continue;
-          }
+          const resolvedUrl = article.url;
 
           const currentImageUrl = article.urlToImage;
           const needsImageBackfill =
