@@ -1,4 +1,4 @@
-import { getBackendHealth } from "../server/news-service";
+import { getBackendHealth } from "../server/news-service.ts";
 
 export default {
   async fetch() {

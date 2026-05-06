@@ -3,8 +3,8 @@ import {
   getBackendHealth,
   getNewsWithMeta,
   HttpError,
-} from "./news-service";
-import { getWeatherSnapshot } from "./weather-service";
+} from "./news-service.ts";
+import { getWeatherSnapshot } from "./weather-service.ts";
 import type { LanguageCode, LocalEdition, NewsFeedResponse, RegionCode } from "../src/types";
 
 type QueryValue = string | undefined;

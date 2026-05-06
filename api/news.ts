@@ -2,7 +2,7 @@ import {
   handleNewsRequest,
   type ApiRequestLike,
   type ApiResponseLike,
-} from "../server/api-handlers";
+} from "../server/api-handlers.ts";
 
 type BufferedApiResponse = ApiResponseLike & {
   toResponse(): Response;
