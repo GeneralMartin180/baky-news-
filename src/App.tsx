@@ -169,6 +169,13 @@ interface FeedLeadStoryProps {
 }
 
 function FeedLeadStory({ article, onSelect }: FeedLeadStoryProps) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = Boolean(article.urlToImage) && !imageFailed;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [article.urlToImage]);
+
   return (
     <button
       type="button"
@@ -176,12 +183,13 @@ function FeedLeadStory({ article, onSelect }: FeedLeadStoryProps) {
       className="group news-card-shadow news-pressable grid w-full overflow-hidden rounded-lg border border-slate-200/80 bg-white text-left lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.95fr)]"
     >
       <div className="relative min-h-[280px] overflow-hidden bg-slate-100 lg:min-h-[440px]">
-        {article.urlToImage ? (
+        {showImage ? (
           <img
             src={article.urlToImage}
             alt={article.title}
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]"
             referrerPolicy="no-referrer"
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-100 text-slate-400">
@@ -230,6 +238,13 @@ interface BriefingItemProps {
 }
 
 function BriefingItem({ article, onSelect }: BriefingItemProps) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = Boolean(article.urlToImage) && !imageFailed;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [article.urlToImage]);
+
   return (
     <button
       type="button"
@@ -237,12 +252,13 @@ function BriefingItem({ article, onSelect }: BriefingItemProps) {
       className="group news-pressable news-soft-shadow grid w-full grid-cols-[112px_minmax(0,1fr)] gap-4 rounded-lg border border-slate-200/70 bg-slate-50/65 p-2 text-left hover:border-slate-300 hover:bg-white"
     >
       <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-slate-100">
-        {article.urlToImage ? (
+        {showImage ? (
           <img
             src={article.urlToImage}
             alt={article.title}
             className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
             referrerPolicy="no-referrer"
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-slate-400">

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ExternalLink,
   Globe,
@@ -39,6 +39,10 @@ export function NewsCard({ article, index, onSelect }: NewsCardProps) {
 
   const PlaceholderIcon = getPlaceholderIcon(article.title);
   const showImage = Boolean(article.urlToImage) && !imageFailed;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [article.urlToImage]);
 
   return (
     <button

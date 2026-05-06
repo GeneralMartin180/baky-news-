@@ -23,6 +23,13 @@ type FeedOptions = {
   region: RegionCode;
 };
 
+type ImageCandidate = {
+  height: number;
+  priority: number;
+  url: string;
+  width: number;
+};
+
 const CATEGORIES = new Set<Category>([
   "business",
   "entertainment",
@@ -254,6 +261,31 @@ function firstMatch(value: string, pattern: RegExp) {
   return decodeHtml(value.match(pattern)?.[1] ?? "");
 }
 
+function extractAttribute(tag: string, name: string) {
+  return decodeHtml(tag.match(new RegExp(`${name}=["']([^"']+)["']`, "i"))?.[1] ?? "");
+}
+
+function extractPulseCmsImage(value: string) {
+  try {
+    const parsedUrl = new URL(value);
+    const assetId = parsedUrl.pathname.split("/").filter(Boolean).pop() ?? "";
+
+    if (
+      assetId.length >= 20 &&
+      /^[A-Za-z0-9_.-]+$/.test(assetId) &&
+      (parsedUrl.hostname.includes("img.aktuality.sk") ||
+        parsedUrl.hostname.includes("zive.aktuality.sk") ||
+        parsedUrl.hostname.includes("ocdn.eu"))
+    ) {
+      return `https://ocdn.eu/pulscms-transforms/1/${assetId}`;
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
 function normalizeImageUrl(value: string, baseUrl = "") {
   let imageUrl = decodeHtml(value);
   if (!imageUrl) return "";
@@ -265,15 +297,52 @@ function normalizeImageUrl(value: string, baseUrl = "") {
   }
 
   if (imageUrl.startsWith("http://")) imageUrl = imageUrl.replace("http://", "https://");
+
+  const pulseCmsImage = extractPulseCmsImage(imageUrl);
+  if (pulseCmsImage) {
+    imageUrl = pulseCmsImage;
+  }
+
   if (imageUrl.includes("ichef.bbci.co.uk")) {
     imageUrl = imageUrl.replace(/\/ace\/standard\/\d+\//, "/ace/standard/1024/");
+  }
+
+  if (imageUrl.includes("cmestatic.com")) {
+    imageUrl = imageUrl.replace(/\/size\/[0-9x]+\//, "/size/orig/");
+  }
+
+  if (imageUrl.includes("ta3.com")) {
+    imageUrl = imageUrl.replace("/thumbs/", "/").replace("/t_", "/");
+  }
+
+  if (imageUrl.includes("pravda.sk")) {
+    imageUrl = imageUrl.replace(/\/w[0-9]+\//, "/");
+  }
+
+  if (
+    imageUrl.includes("i0.wp.com") ||
+    imageUrl.includes("i1.wp.com") ||
+    imageUrl.includes("i2.wp.com")
+  ) {
+    imageUrl = imageUrl.replace(/\?(fit|w|h|resize|zoom)=[^&]+(&[^&]+)*/i, "");
+  }
+
+  imageUrl = imageUrl.replace(/-[0-9]+x[0-9]+\.(jpg|jpeg|png|webp)$/i, ".$1");
+
+  if (imageUrl.includes("wp-content") || imageUrl.includes("pravda.sk")) {
+    imageUrl = imageUrl.split("?")[0];
   }
 
   const lowerImageUrl = imageUrl.toLowerCase();
   if (
     lowerImageUrl.includes("favicon") ||
+    lowerImageUrl.includes("/logo-fixed") ||
+    lowerImageUrl.includes("/mobile-logo") ||
+    lowerImageUrl.includes("/logo/") ||
     lowerImageUrl.includes("logo") ||
     lowerImageUrl.includes("sprite") ||
+    lowerImageUrl.includes("tracking") ||
+    lowerImageUrl.includes("pixel") ||
     lowerImageUrl.includes("placeholder") ||
     lowerImageUrl.includes("gstatic.com")
   ) {
@@ -283,15 +352,100 @@ function normalizeImageUrl(value: string, baseUrl = "") {
   return imageUrl;
 }
 
-function extractImageFromItem(item: string, baseUrl: string) {
-  const image =
-    item.match(/<media:thumbnail[^>]*url=["']([^"']+)["']/i)?.[1] ??
-    item.match(/<media:content[^>]*url=["']([^"']+)["']/i)?.[1] ??
-    item.match(/<enclosure[^>]*url=["']([^"']+)["']/i)?.[1] ??
-    item.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] ??
-    "";
+function extractBestSrcsetUrl(rawSrcset: string) {
+  const candidates = rawSrcset
+    .split(",")
+    .map((part) => {
+      const [url, descriptor] = part.trim().split(/\s+/, 2);
+      const width = Number(descriptor?.replace("w", "")) || 0;
+      return { url, width };
+    })
+    .filter((candidate) => Boolean(candidate.url));
 
-  return normalizeImageUrl(image, baseUrl);
+  candidates.sort((left, right) => right.width - left.width);
+  return candidates[0]?.url ?? "";
+}
+
+function addImageCandidate(
+  candidates: ImageCandidate[],
+  rawUrl: string,
+  baseUrl: string,
+  priority: number,
+  width = 0,
+  height = 0
+) {
+  const normalized = normalizeImageUrl(rawUrl, baseUrl);
+  if (!normalized) {
+    return;
+  }
+
+  candidates.push({
+    height,
+    priority,
+    url: normalized,
+    width,
+  });
+}
+
+function extractImageFromItem(item: string, baseUrl: string) {
+  const candidates: ImageCandidate[] = [];
+
+  for (const tag of item.match(/<media:content\b[^>]*>/gi) ?? []) {
+    addImageCandidate(
+      candidates,
+      extractAttribute(tag, "url"),
+      baseUrl,
+      40,
+      Number(extractAttribute(tag, "width")) || 0,
+      Number(extractAttribute(tag, "height")) || 0
+    );
+  }
+
+  for (const tag of item.match(/<enclosure\b[^>]*>/gi) ?? []) {
+    addImageCandidate(candidates, extractAttribute(tag, "url"), baseUrl, 35);
+  }
+
+  for (const tag of item.match(/<media:thumbnail\b[^>]*>/gi) ?? []) {
+    addImageCandidate(
+      candidates,
+      extractAttribute(tag, "url"),
+      baseUrl,
+      20,
+      Number(extractAttribute(tag, "width")) || 0,
+      Number(extractAttribute(tag, "height")) || 0
+    );
+  }
+
+  for (const tag of item.match(/<source\b[^>]*>/gi) ?? []) {
+    addImageCandidate(
+      candidates,
+      extractBestSrcsetUrl(extractAttribute(tag, "srcset") || extractAttribute(tag, "data-srcset")),
+      baseUrl,
+      30
+    );
+  }
+
+  for (const tag of item.match(/<img\b[^>]*>/gi) ?? []) {
+    addImageCandidate(
+      candidates,
+      extractAttribute(tag, "data-src") ||
+        extractAttribute(tag, "data-lazy-src") ||
+        extractBestSrcsetUrl(extractAttribute(tag, "srcset")) ||
+        extractAttribute(tag, "src"),
+      baseUrl,
+      10,
+      Number(extractAttribute(tag, "width")) || 0,
+      Number(extractAttribute(tag, "height")) || 0
+    );
+  }
+
+  candidates.sort((left, right) => {
+    const leftArea = left.width * left.height;
+    const rightArea = right.width * right.height;
+    return rightArea + right.priority * 1_000_000 - (leftArea + left.priority * 1_000_000);
+  });
+
+  return candidates[0]?.url ?? "";
 }
 
 function parseItems(xml: string, candidate: FeedCandidate): NewsArticle[] {
@@ -490,6 +644,7 @@ export default async function handler(request: any, response?: any) {
     const language = normalizeLanguage(searchParams.get("lang"));
     const region = normalizeRegion(searchParams.get("region"));
     const localEdition = normalizeLocalEdition(searchParams.get("localEdition"));
+    const refresh = searchParams.get("refresh") === "true";
     const localEditionSummary = buildLocalEditionSummary(language, region, localEdition);
 
     const result = await fetchArticles(
@@ -511,7 +666,9 @@ export default async function handler(request: any, response?: any) {
     } satisfies NewsFeedResponse;
 
     return sendJson(response, feed, 200, {
-      "Cache-Control": "public, max-age=60, s-maxage=180, stale-while-revalidate=600",
+      "Cache-Control": refresh
+        ? "no-store"
+        : "public, max-age=60, s-maxage=180, stale-while-revalidate=600",
       "X-Baky-Cache-State": "standalone",
       "X-Baky-Feed-Updated-At": new Date().toISOString(),
       "X-Baky-Source-Mode": result.sourceMode,

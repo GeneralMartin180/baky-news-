@@ -13,14 +13,17 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
   const [fullContent, setFullContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
     if (!article) {
       setFullContent(null);
       setError(null);
+      setImageFailed(false);
       return;
     }
 
+    setImageFailed(false);
     void fetchFullContent(article.url);
   }, [article]);
 
@@ -107,13 +110,14 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
           </div>
 
           <div className="overflow-y-auto">
-            {article.urlToImage ? (
+            {article.urlToImage && !imageFailed ? (
               <div className="aspect-[21/9] w-full overflow-hidden bg-slate-100">
                 <img
                   src={article.urlToImage}
                   alt={article.title}
                   className="h-full w-full object-cover"
                   referrerPolicy="no-referrer"
+                  onError={() => setImageFailed(true)}
                 />
               </div>
             ) : null}
