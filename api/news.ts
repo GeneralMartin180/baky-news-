@@ -276,6 +276,139 @@ function normalizeImageUrl(value: string) {
   return imageUrl;
 }
 
+function getGoogleNewsArticleId(articleUrl: string) {
+  try {
+    const url = new URL(articleUrl);
+    if (url.hostname !== "news.google.com") return "";
+    const parts = url.pathname.split("/").filter(Boolean);
+    return parts[parts.length - 1] ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function parseGoogleDecodeResponse(value: string) {
+  const line = value
+    .split("\n")
+    .find((part) => part.includes("wrb.fr") && part.includes("garturlres"));
+
+  if (!line) return "";
+
+  try {
+    const parsedLine = JSON.parse(line) as Array<[string, string, string]>;
+    const rawPayload = parsedLine[0]?.[2];
+    if (!rawPayload) return "";
+    const decodedPayload = JSON.parse(rawPayload) as [string, string];
+    return decodedPayload[1] ?? "";
+  } catch {
+    return "";
+  }
+}
+
+async function fetchGoogleDecodeParams(articleId: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+
+  try {
+    const response = await fetch(`https://news.google.com/rss/articles/${articleId}`, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "User-Agent": "Mozilla/5.0 BakyNews/1.0",
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) return null;
+    const html = await response.text();
+    const signature = html.match(/data-n-a-sg=["']([^"']+)["']/i)?.[1] ?? "";
+    const timestamp = html.match(/data-n-a-ts=["']([^"']+)["']/i)?.[1] ?? "";
+    if (!signature || !timestamp) return null;
+    return { signature, timestamp };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function resolveGoogleNewsUrl(articleUrl: string) {
+  const articleId = getGoogleNewsArticleId(articleUrl);
+  if (!articleId) return articleUrl;
+
+  try {
+    const params = await fetchGoogleDecodeParams(articleId);
+    if (!params) return articleUrl;
+
+    const payload = [
+      "Fbv4je",
+      `["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"${articleId}",${params.timestamp},"${params.signature}"]`,
+    ];
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    try {
+      const response = await fetch("https://news.google.com/_/DotsSplashUi/data/batchexecute", {
+        body: `f.req=${encodeURIComponent(JSON.stringify([[payload]]))}`,
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          "User-Agent": "Mozilla/5.0 BakyNews/1.0",
+        },
+        method: "POST",
+        signal: controller.signal,
+      });
+
+      if (!response.ok) return articleUrl;
+      const decodedUrl = parseGoogleDecodeResponse(await response.text());
+      return decodedUrl && decodedUrl.startsWith("http") ? decodedUrl : articleUrl;
+    } finally {
+      clearTimeout(timeout);
+    }
+  } catch {
+    return articleUrl;
+  }
+}
+
+function resolveUrl(value: string, baseUrl: string) {
+  try {
+    return new URL(value, baseUrl).toString();
+  } catch {
+    return "";
+  }
+}
+
+async function extractArticleImage(articleUrl: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+
+  try {
+    const response = await fetch(articleUrl, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "User-Agent": "Mozilla/5.0 BakyNews/1.0",
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      return "";
+    }
+
+    const html = await response.text();
+    const image =
+      html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)?.[1] ??
+      html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i)?.[1] ??
+      "";
+
+    return normalizeImageUrl(resolveUrl(image, articleUrl));
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function parseItems(xml: string, sourceLabel: string): NewsArticle[] {
   const items = Array.from(xml.matchAll(/<item\b[\s\S]*?<\/item>/g)).map((match) => match[0]);
 
@@ -347,12 +480,38 @@ async function fetchCandidate(candidate: FeedCandidate) {
   }
 }
 
+async function backfillImages(articles: NewsArticle[]) {
+  const result = [...articles];
+  const indexes = articles
+    .map((article, index) => ({ article, index }))
+    .slice(0, 8);
+
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(3, indexes.length) }, async () => {
+    while (cursor < indexes.length) {
+      const current = indexes[cursor];
+      cursor += 1;
+
+      const resolvedUrl = await resolveGoogleNewsUrl(current.article.url);
+      const image = current.article.urlToImage || (await extractArticleImage(resolvedUrl));
+      result[current.index] = {
+        ...current.article,
+        url: resolvedUrl,
+        urlToImage: image,
+      };
+    }
+  });
+
+  await Promise.all(workers);
+  return result;
+}
+
 async function fetchArticles(candidates: FeedCandidate[]) {
   for (const candidate of candidates) {
     try {
       const articles = await fetchCandidate(candidate);
       if (articles.length) {
-        return dedupeArticles(articles).slice(0, 24);
+        return backfillImages(dedupeArticles(articles).slice(0, 24));
       }
     } catch (error) {
       console.warn(`Vercel feed candidate failed (${candidate.label})`, error);

@@ -35,7 +35,7 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
       }
 
       const data = await response.json();
-      setFullContent(data.content);
+      setFullContent(data.content || null);
     } catch (fetchError) {
       console.error(fetchError);
       setError(
@@ -146,8 +146,13 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-lg border border-slate-200/80 bg-slate-50 px-5 py-6 text-[15px] leading-7 text-slate-600">
-                    Podrobnejší obsah nie je k dispozícii. Otvorte originálny článok pre plnú verziu.
+                  <div className="space-y-4">
+                    <p className="text-[17px] leading-8 text-slate-700">
+                      {article.description}
+                    </p>
+                    <div className="rounded-lg border border-slate-200/80 bg-slate-50 px-5 py-4 text-[15px] leading-7 text-slate-600">
+                      Podrobnejší obsah nie je k dispozícii. Otvorte originálny článok pre plnú verziu.
+                    </div>
                   </div>
                 )}
               </div>
