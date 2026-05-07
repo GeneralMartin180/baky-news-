@@ -19,6 +19,8 @@ type FeedCandidate = {
 type FeedOptions = {
   category: Category;
   language: LanguageCode;
+  locationLabel: string;
+  locationQuery: string;
   localEdition: LocalEdition;
   query: string;
   region: RegionCode;
@@ -834,6 +836,20 @@ function filterArticlesByQuery(articles: NewsArticle[], query: string) {
   return articles.filter((article) => articleMatchesQuery(article, tokens));
 }
 
+function filterWeatherOnlyArticles(articles: NewsArticle[]) {
+  return articles.filter((article) => {
+    const source = normalizeText(article.source.name);
+    const title = normalizeText(article.title);
+    return !(
+      source.includes("accuweather") ||
+      source.includes("weather") ||
+      title.includes("pocasie") ||
+      title.includes("predpoved pocasia") ||
+      title.includes("minutecast")
+    );
+  });
+}
+
 function dedupeArticles(articles: NewsArticle[]) {
   const seenUrls = new Set<string>();
   const seenTitles = new Set<string>();
@@ -858,8 +874,16 @@ function dedupeArticles(articles: NewsArticle[]) {
   });
 }
 
-function rankArticles(articles: NewsArticle[], localEdition: LocalEdition, query: string) {
-  const localQuery = localEdition !== "all" && !query ? LOCAL_EDITIONS[localEdition]?.query ?? "" : query;
+function rankArticles(
+  articles: NewsArticle[],
+  localEdition: LocalEdition,
+  query: string,
+  locationQuery = ""
+) {
+  const localQuery =
+    query ||
+    locationQuery ||
+    (localEdition !== "all" ? LOCAL_EDITIONS[localEdition]?.query ?? "" : "");
   const tokens = getSearchTokens(localQuery);
 
   if (!tokens.length) {
@@ -933,7 +957,10 @@ async function fetchArticles(
   candidates: FeedCandidate[],
   query: string,
   localEdition: LocalEdition,
-  category: Category
+  category: Category,
+  locationQuery: string,
+  locationSearchCandidates: FeedCandidate[] = [],
+  locationSearchQuery = locationQuery
 ) {
   if (query) {
     const searchResult = await fetchSearchArticles(candidates, query);
@@ -945,6 +972,15 @@ async function fetchArticles(
 
   const fetchedArticles: NewsArticle[] = [];
   let sourceMode = "rss";
+  let locationArticles: NewsArticle[] = [];
+
+  if (locationQuery && locationSearchCandidates.length) {
+    const locationResult = await fetchSearchArticles(locationSearchCandidates, locationSearchQuery);
+    locationArticles = filterWeatherOnlyArticles(locationResult.articles).slice(0, 12);
+    if (locationArticles.length) {
+      sourceMode = `location-${locationResult.sourceMode}`;
+    }
+  }
 
   for (const candidate of candidates) {
     try {
@@ -963,8 +999,9 @@ async function fetchArticles(
   }
 
   const filtered = filterArticlesByQuery(dedupeArticles(fetchedArticles), query);
-  const ranked = rankArticles(filtered, localEdition, query).slice(0, 36);
-  const articles = await enrichGeneralArticleImages(ranked, category, query);
+  const ranked = rankArticles(filtered, localEdition, query, locationQuery).slice(0, 36);
+  const merged = dedupeArticles([...locationArticles, ...ranked]).slice(0, 36);
+  const articles = await enrichGeneralArticleImages(merged, category, query);
   return {
     articles,
     sourceMode,
@@ -974,8 +1011,18 @@ async function fetchArticles(
 function buildLocalEditionSummary(
   language: LanguageCode,
   region: RegionCode,
-  localEdition: LocalEdition
+  localEdition: LocalEdition,
+  locationLabel: string
 ): LocalEditionSummary | null {
+  if (locationLabel) {
+    return {
+      badge: "Poloha",
+      description: "Spravy, pocasie a lokalny kontext su prisposobene povolenej polohe.",
+      id: "all",
+      label: locationLabel,
+    };
+  }
+
   if (!isSlovakEdition(language, region) || localEdition === "all") {
     return null;
   }
@@ -1033,20 +1080,31 @@ export default async function handler(request: any, response?: any) {
     const language = normalizeLanguage(searchParams.get("lang"));
     const region = normalizeRegion(searchParams.get("region"));
     const localEdition = normalizeLocalEdition(searchParams.get("localEdition"));
+    const locationLabel = (searchParams.get("locationLabel") ?? "").trim();
+    const locationQuery = (searchParams.get("locationQuery") ?? "").trim();
     const refresh = searchParams.get("refresh") === "true";
-    const localEditionSummary = buildLocalEditionSummary(language, region, localEdition);
+    const localEditionSummary = buildLocalEditionSummary(language, region, localEdition, locationLabel);
+    const locationSearchQuery = `${locationLabel || locationQuery} spravy`.trim();
+    const options = {
+      category,
+      language,
+      locationLabel,
+      locationQuery,
+      localEdition,
+      query,
+      region,
+    };
 
     const result = await fetchArticles(
-      buildCandidates({
-        category,
-        language,
-        localEdition,
-        query,
-        region,
-      }),
+      buildCandidates(options),
       query,
       localEdition,
-      category
+      category,
+      locationQuery,
+      locationQuery && !query
+        ? buildSearchCandidates({ ...options, query: locationSearchQuery })
+        : [],
+      locationSearchQuery
     );
 
     const feed = {

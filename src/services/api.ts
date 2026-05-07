@@ -6,10 +6,18 @@ import {
   WikiSummary,
 } from '../types';
 
+function hasCoordinates(settings?: Pick<FeedSettings, 'location' | 'useLocation'>) {
+  return (
+    Boolean(settings?.useLocation) &&
+    typeof settings?.location?.latitude === 'number' &&
+    typeof settings?.location?.longitude === 'number'
+  );
+}
+
 export async function fetchNews(
   category: Category | string = 'general',
   query?: string,
-  settings?: Pick<FeedSettings, 'language' | 'localEdition' | 'region'>,
+  settings?: Pick<FeedSettings, 'language' | 'localEdition' | 'location' | 'region' | 'useLocation'>,
   refresh: boolean = false,
   signal?: AbortSignal
 ): Promise<NewsFeedResponse> {
@@ -29,6 +37,17 @@ export async function fetchNews(
     }
     if (settings?.localEdition) {
       url.searchParams.append('localEdition', settings.localEdition);
+    }
+    if (hasCoordinates(settings)) {
+      const location = settings!.location!;
+      url.searchParams.append('latitude', String(location.latitude));
+      url.searchParams.append('longitude', String(location.longitude));
+      if (location.label) {
+        url.searchParams.append('locationLabel', location.label);
+      }
+      if (location.query) {
+        url.searchParams.append('locationQuery', location.query);
+      }
     }
 
     if (refresh) {
@@ -72,13 +91,21 @@ export async function fetchWikiSummary(
 }
 
 export async function fetchWeather(
-  settings: Pick<FeedSettings, 'language' | 'localEdition' | 'region'>,
+  settings: Pick<FeedSettings, 'language' | 'localEdition' | 'location' | 'region' | 'useLocation'>,
   signal?: AbortSignal
 ): Promise<WeatherSnapshot> {
   const url = new URL('/api/weather', window.location.origin);
   url.searchParams.append('lang', settings.language);
   url.searchParams.append('region', settings.region);
   url.searchParams.append('localEdition', settings.localEdition);
+  if (hasCoordinates(settings)) {
+    const location = settings.location!;
+    url.searchParams.append('latitude', String(location.latitude));
+    url.searchParams.append('longitude', String(location.longitude));
+    if (location.label) {
+      url.searchParams.append('locationLabel', location.label);
+    }
+  }
 
   const response = await fetch(url.toString(), { signal });
   if (!response.ok) {

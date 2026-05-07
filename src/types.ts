@@ -69,9 +69,21 @@ export interface WeatherSnapshot {
   windSpeedKmh: number;
 }
 
+export interface LocationPreference {
+  countryCode?: string;
+  enabled: boolean;
+  label?: string;
+  latitude?: number;
+  longitude?: number;
+  query?: string;
+  updatedAt?: string;
+}
+
 export interface FeedSettings {
   language: LanguageCode;
   region: RegionCode;
   autoRefreshMinutes: AutoRefreshMinutes;
   localEdition: LocalEdition;
+  useLocation: boolean;
+  location?: LocationPreference;
 }

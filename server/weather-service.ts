@@ -182,14 +182,31 @@ async function geocodeLocation(
 
 export async function getWeatherSnapshot(options: {
   language?: LanguageCode;
+  latitude?: number;
   localEdition?: LocalEdition;
+  locationLabel?: string;
+  longitude?: number;
   region?: RegionCode;
 } = {}): Promise<WeatherSnapshot> {
   const language = options.language ?? "sk";
   const localEdition = options.localEdition ?? "all";
   const region = options.region ?? "SK";
-  const location = resolveWeatherLocation(region, localEdition);
-  const cacheKey = `weather-${region}-${localEdition}-${language}`;
+  const hasPreciseLocation =
+    typeof options.latitude === "number" &&
+    Number.isFinite(options.latitude) &&
+    typeof options.longitude === "number" &&
+    Number.isFinite(options.longitude);
+  const location = hasPreciseLocation
+    ? {
+        label: options.locationLabel || "Aktualna poloha",
+        latitude: options.latitude!,
+        longitude: options.longitude!,
+        query: options.locationLabel || "Aktualna poloha",
+      }
+    : resolveWeatherLocation(region, localEdition);
+  const cacheKey = hasPreciseLocation
+    ? `weather-location-${options.latitude?.toFixed(3)}-${options.longitude?.toFixed(3)}-${language}`
+    : `weather-${region}-${localEdition}-${language}`;
   const cached = weatherCache.get<WeatherSnapshot>(cacheKey);
   if (cached) {
     return cached;

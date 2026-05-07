@@ -89,6 +89,12 @@ function normalizeRegion(value: string | null): RegionCode {
   return REGIONS.has(value as RegionCode) ? (value as RegionCode) : "SK";
 }
 
+function normalizeCoordinate(value: string | null) {
+  if (!value) return null;
+  const coordinate = Number(value);
+  return Number.isFinite(coordinate) ? coordinate : null;
+}
+
 function resolveLocation(region: RegionCode, localEdition: LocalEdition) {
   if (localEdition !== "all" && LOCAL_EDITION_LOCATIONS[localEdition]) {
     return LOCAL_EDITION_LOCATIONS[localEdition];
@@ -165,12 +171,24 @@ export default async function handler(request: any, response?: any) {
   normalizeLanguage(searchParams.get("lang"));
   const region = normalizeRegion(searchParams.get("region"));
   const localEdition = normalizeLocalEdition(searchParams.get("localEdition"));
-  const location = resolveLocation(region, localEdition);
+  const latitude = normalizeCoordinate(searchParams.get("latitude"));
+  const longitude = normalizeCoordinate(searchParams.get("longitude"));
+  const locationLabel = (searchParams.get("locationLabel") ?? "").trim();
+  const hasPreciseLocation = latitude !== null && longitude !== null;
+  const location = hasPreciseLocation
+    ? {
+        label: locationLabel || "Aktualna poloha",
+        latitude: latitude!,
+        longitude: longitude!,
+      }
+    : resolveLocation(region, localEdition);
 
   try {
     const snapshot = await fetchWeatherSnapshot(location);
     return sendJson(response, snapshot, 200, {
-      "Cache-Control": "public, max-age=300, s-maxage=600, stale-while-revalidate=1800",
+      "Cache-Control": hasPreciseLocation
+        ? "no-store"
+        : "public, max-age=300, s-maxage=600, stale-while-revalidate=1800",
     });
   } catch (error) {
     console.error("Vercel weather handler failed:", error);

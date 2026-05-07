@@ -13,6 +13,7 @@ import {
   AutoRefreshMinutes,
   FeedSettings,
   LanguageCode,
+  LocationPreference,
   LocalEdition,
   RegionCode,
 } from '../types';
@@ -32,14 +33,7 @@ const languageOptions: Array<{ label: string; value: LanguageCode }> = [
   { label: 'Deutsch', value: 'de' },
 ];
 
-const regionOptions: Array<{ label: string; value: RegionCode }> = [
-  { label: 'Slovensko', value: 'SK' },
-  { label: 'United States', value: 'US' },
-  { label: 'United Kingdom', value: 'GB' },
-  { label: 'Česko', value: 'CZ' },
-  { label: 'Deutschland', value: 'DE' },
-  { label: 'Österreich', value: 'AT' },
-];
+const supportedRegionCodes: RegionCode[] = ['SK', 'US', 'GB', 'CZ', 'DE', 'AT'];
 
 const localEditionOptions: Array<{
   description: string;
@@ -93,7 +87,71 @@ const DEFAULT_SETTINGS: FeedSettings = {
   region: 'SK',
   autoRefreshMinutes: 1,
   localEdition: 'all',
+  useLocation: false,
 };
+
+function resolveRegionFromLocation(countryCode: string | undefined, fallback: RegionCode): RegionCode {
+  return supportedRegionCodes.includes(countryCode as RegionCode)
+    ? (countryCode as RegionCode)
+    : fallback;
+}
+
+function hasCoordinates(location: LocationPreference | undefined) {
+  return typeof location?.latitude === 'number' && typeof location?.longitude === 'number';
+}
+
+function getCurrentPosition() {
+  return new Promise<GeolocationPosition>((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: false,
+      maximumAge: 10 * 60 * 1000,
+      timeout: 10000,
+    });
+  });
+}
+
+async function reverseGeocodeLocation(
+  latitude: number,
+  longitude: number
+): Promise<LocationPreference> {
+  try {
+    const url = new URL('https://api.bigdatacloud.net/data/reverse-geocode-client');
+    url.searchParams.set('latitude', String(latitude));
+    url.searchParams.set('longitude', String(longitude));
+    url.searchParams.set('localityLanguage', 'sk');
+
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`Reverse geocode failed with ${response.status}`);
+    }
+
+    const data = await response.json();
+    const city = data.city || data.locality || data.localityInfo?.administrative?.[3]?.name;
+    const subdivision = data.principalSubdivision || data.localityInfo?.administrative?.[2]?.name;
+    const countryName = data.countryName;
+    const labelParts = [city, subdivision].filter(Boolean);
+    const queryParts = [city, data.locality, subdivision, countryName].filter(Boolean);
+
+    return {
+      countryCode: data.countryCode,
+      enabled: true,
+      label: labelParts.length ? Array.from(new Set(labelParts)).join(', ') : 'Aktuálna poloha',
+      latitude,
+      longitude,
+      query: Array.from(new Set(queryParts)).join(' '),
+      updatedAt: new Date().toISOString(),
+    };
+  } catch {
+    return {
+      enabled: true,
+      label: 'Aktuálna poloha',
+      latitude,
+      longitude,
+      query: '',
+      updatedAt: new Date().toISOString(),
+    };
+  }
+}
 
 export function FeedSettingsModal({
   isOpen,
@@ -102,25 +160,40 @@ export function FeedSettingsModal({
   onSave,
 }: FeedSettingsModalProps) {
   const [draft, setDraft] = useState<FeedSettings>(settings);
+  const [isResolvingLocation, setIsResolvingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setDraft(settings);
+      setLocationError(null);
     }
   }, [isOpen, settings]);
 
   const isLocalEditionEnabled = useMemo(
-    () => draft.language === 'sk' && draft.region === 'SK',
-    [draft.language, draft.region]
+    () => !draft.useLocation && draft.language === 'sk' && draft.region === 'SK',
+    [draft.language, draft.region, draft.useLocation]
   );
 
-  const normalizeSettings = (nextSettings: FeedSettings): FeedSettings => ({
-    ...nextSettings,
-    localEdition:
-      nextSettings.language === 'sk' && nextSettings.region === 'SK'
-        ? nextSettings.localEdition
-        : 'all',
-  });
+  const normalizeSettings = (nextSettings: FeedSettings): FeedSettings => {
+    if (nextSettings.useLocation && hasCoordinates(nextSettings.location)) {
+      return {
+        ...nextSettings,
+        localEdition: 'all',
+        region: resolveRegionFromLocation(nextSettings.location.countryCode, nextSettings.region),
+      };
+    }
+
+    return {
+      ...nextSettings,
+      location: undefined,
+      useLocation: false,
+      localEdition:
+        nextSettings.language === 'sk' && nextSettings.region === 'SK'
+          ? nextSettings.localEdition
+          : 'all',
+    };
+  };
 
   const commitSettings = (nextSettings: FeedSettings) => {
     const normalized = normalizeSettings(nextSettings);
@@ -130,6 +203,45 @@ export function FeedSettingsModal({
 
   const handleSave = () => {
     onClose();
+  };
+
+  const handleLocationToggle = async () => {
+    setLocationError(null);
+
+    if (draft.useLocation) {
+      commitSettings({
+        ...draft,
+        location: undefined,
+        useLocation: false,
+      });
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setLocationError('Prehliadač nepodporuje zisťovanie polohy.');
+      return;
+    }
+
+    setIsResolvingLocation(true);
+    try {
+      const position = await getCurrentPosition();
+      const location = await reverseGeocodeLocation(
+        position.coords.latitude,
+        position.coords.longitude
+      );
+
+      commitSettings({
+        ...draft,
+        localEdition: 'all',
+        location,
+        region: resolveRegionFromLocation(location.countryCode, draft.region),
+        useLocation: true,
+      });
+    } catch {
+      setLocationError('Poloha nebola povolená alebo sa ju nepodarilo načítať.');
+    } finally {
+      setIsResolvingLocation(false);
+    }
   };
 
   return (
@@ -160,7 +272,7 @@ export function FeedSettingsModal({
                     Nastavenia feedu
                   </h2>
                   <p className="text-sm text-slate-500">
-                    Jazyk, región, lokálna edícia a tempo automatického obnovovania.
+                    Jazyk, poloha, lokálna edícia a tempo automatického obnovovania.
                   </p>
                 </div>
               </div>
@@ -204,32 +316,46 @@ export function FeedSettingsModal({
                   </select>
                 </label>
 
-                <label className="space-y-2">
+                <div className="space-y-2">
                   <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
                     <MapPinned className="h-4 w-4 text-sky-700" />
-                    Región vydania
+                    Poloha
                   </span>
-                  <select
-                    value={draft.region}
-                    onChange={(event) =>
-                      commitSettings({
-                        ...draft,
-                        region: event.target.value as RegionCode,
-                        localEdition:
-                          draft.language === 'sk' && event.target.value === 'SK'
-                            ? draft.localEdition
-                            : 'all',
-                      })
-                    }
-                    className="h-11 w-full rounded-full border border-slate-300 bg-white px-4 text-sm text-slate-950 outline-none transition-colors focus:border-slate-500"
+                  <button
+                    type="button"
+                    onClick={handleLocationToggle}
+                    disabled={isResolvingLocation}
+                    className={cn(
+                      'news-pressable flex h-11 w-full items-center justify-between rounded-full border px-4 text-sm font-medium disabled:cursor-wait disabled:scale-100',
+                      draft.useLocation
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+                    )}
                   >
-                    {regionOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    <span>{isResolvingLocation ? 'Načítavam polohu' : 'Povoliť polohu'}</span>
+                    <span
+                      className={cn(
+                        'relative h-6 w-11 rounded-full transition-colors',
+                        draft.useLocation ? 'bg-emerald-400' : 'bg-slate-200'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform',
+                          draft.useLocation ? 'translate-x-6' : 'translate-x-1'
+                        )}
+                      />
+                    </span>
+                  </button>
+                  <p className="text-xs leading-5 text-slate-500">
+                    {draft.useLocation && draft.location?.label
+                      ? `Aktívne: ${draft.location.label}`
+                      : 'Po povolení sa podľa polohy nastaví počasie, feed aj lokálne zoradenie správ.'}
+                  </p>
+                  {locationError ? (
+                    <p className="text-xs leading-5 text-rose-600">{locationError}</p>
+                  ) : null}
+                </div>
               </div>
 
               <div className="news-soft-shadow rounded-lg border border-slate-200/80 bg-slate-50/80 px-4 py-4">
@@ -240,8 +366,8 @@ export function FeedSettingsModal({
                       Ako to funguje
                     </h3>
                     <p className="mt-1 text-sm leading-6 text-slate-500">
-                      Slovenská edícia vie miešať aj lokálne témy podľa mesta alebo regiónu.
-                      Pri iných regiónoch ostáva feed globálny a lokálna edícia sa vypne.
+                      Keď povolíte polohu, počasie používa presné súradnice a správy sa zoradia podľa mesta alebo regiónu.
+                      Bez povolenej polohy ostáva dostupná ručná lokálna edícia.
                     </p>
                   </div>
                 </div>
@@ -290,7 +416,7 @@ export function FeedSettingsModal({
 
                 {!isLocalEditionEnabled ? (
                   <p className="mt-3 text-sm leading-6 text-slate-500">
-                    Lokálna edícia je dostupná pre jazyk <strong>Slovenčina</strong> a región <strong>Slovensko</strong>.
+                    Lokálna edícia je dostupná pri ručnom nastavení pre jazyk <strong>Slovenčina</strong>. Pri povolenej polohe sa feed riadi aktuálnou polohou.
                   </p>
                 ) : null}
               </div>

@@ -103,10 +103,16 @@ export async function handleWeatherRequest(request: ApiRequestLike, response: Ap
     const language = (readQueryValue(request.query?.lang) ?? "sk") as LanguageCode;
     const region = (readQueryValue(request.query?.region) ?? "SK") as RegionCode;
     const localEdition = (readQueryValue(request.query?.localEdition) ?? "all") as LocalEdition;
+    const latitude = Number(readQueryValue(request.query?.latitude));
+    const longitude = Number(readQueryValue(request.query?.longitude));
+    const locationLabel = readQueryValue(request.query?.locationLabel);
 
     const snapshot = await getWeatherSnapshot({
       language,
+      latitude: Number.isFinite(latitude) ? latitude : undefined,
       localEdition,
+      locationLabel,
+      longitude: Number.isFinite(longitude) ? longitude : undefined,
       region,
     });
     setCacheControl(

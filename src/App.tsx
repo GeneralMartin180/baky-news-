@@ -41,6 +41,7 @@ const DEFAULT_FEED_SETTINGS: FeedSettings = {
   region: 'SK',
   autoRefreshMinutes: 1,
   localEdition: 'all',
+  useLocation: false,
 };
 
 const SUPPORTED_LANGUAGES = ['sk', 'en', 'cs', 'de'] as const;
@@ -136,11 +137,18 @@ function readStoredFeedSettings(): FeedSettings {
       ? parsed.localEdition!
       : DEFAULT_FEED_SETTINGS.localEdition;
 
+    const hasStoredLocation =
+      parsed.useLocation &&
+      typeof parsed.location?.latitude === 'number' &&
+      typeof parsed.location?.longitude === 'number';
+
     return {
       language,
       region,
       autoRefreshMinutes,
       localEdition,
+      useLocation: Boolean(hasStoredLocation),
+      location: hasStoredLocation ? parsed.location : undefined,
     };
   } catch {
     return DEFAULT_FEED_SETTINGS;
@@ -568,7 +576,9 @@ export default function App() {
   const gridArticles = visibleArticles.slice(5);
   const remainingArticles = Math.max(filteredArticles.length - visibleArticlesCount, 0);
   const feedMeta = buildFeedMeta(category, searchQuery);
-  const settingsLabel = `${feedSettings.language.toUpperCase()} / ${feedSettings.region}`;
+  const settingsLabel = feedSettings.useLocation && feedSettings.location?.label
+    ? `${feedSettings.language.toUpperCase()} / ${feedSettings.location.label}`
+    : `${feedSettings.language.toUpperCase()} / ${feedSettings.region}`;
 
   return (
     <div className="min-h-screen bg-[#f4f5f7] text-slate-950">
