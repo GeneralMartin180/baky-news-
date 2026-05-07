@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Calendar, ExternalLink, Globe, Loader2, X } from 'lucide-react';
+import { Calendar, ExternalLink, Globe, X } from 'lucide-react';
 
+import { LoadingIndicator } from './LoadingIndicator';
 import { NewsArticle } from '../types';
 
 interface ArticleModalProps {
@@ -134,7 +135,7 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
               <div className="mt-8">
                 {isLoading ? (
                   <div className="news-soft-shadow flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-lg border border-slate-200/80 bg-slate-50">
-                    <Loader2 className="h-7 w-7 animate-spin text-slate-700" />
+                    <LoadingIndicator ariaLabel="Nacitavam plny text clanku" />
                     <p className="text-sm text-slate-500">Načítavam plný text článku</p>
                   </div>
                 ) : error ? (

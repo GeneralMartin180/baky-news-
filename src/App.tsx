@@ -5,7 +5,6 @@ import {
   Clock3,
   Home,
   LayoutGrid,
-  Loader2,
   MapPinned,
   Newspaper,
   RotateCcw,
@@ -28,6 +27,7 @@ import { fetchNews, fetchWeather, fetchWikiSummary } from './services/api';
 import { ArticleModal } from './components/ArticleModal';
 import { CategoryFilter } from './components/CategoryFilter';
 import { FeedSettingsModal } from './components/FeedSettingsModal';
+import { LoadingIndicator } from './components/LoadingIndicator';
 import { Logo } from './components/Logo';
 import { NewsCard } from './components/NewsCard';
 import { SearchBar } from './components/SearchBar';
@@ -681,7 +681,7 @@ export default function App() {
 
         {isLoading ? (
           <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
-            <Loader2 className="h-10 w-10 animate-spin text-slate-700" />
+            <LoadingIndicator ariaLabel="Nacitavam spravy" />
             <div className="text-center">
               <p className="text-base font-medium text-slate-900">Načítavam správy</p>
               <p className="mt-1 text-sm text-slate-500">
