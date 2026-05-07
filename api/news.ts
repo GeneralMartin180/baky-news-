@@ -38,7 +38,9 @@ type NormalizeImageOptions = {
 const ARTICLE_IMAGE_CACHE_MS = 60 * 60 * 1000;
 const ARTICLE_IMAGE_ENRICHMENT_LIMIT = 12;
 const ARTICLE_IMAGE_TIMEOUT_MS = 3000;
+const GOOGLE_NEWS_DECODE_CACHE_MS = 60 * 60 * 1000;
 const articleImageCache = new Map<string, { expiresAt: number; imageUrl: string }>();
+const googleNewsUrlCache = new Map<string, { expiresAt: number; url: string }>();
 
 const CATEGORIES = new Set<Category>([
   "business",
@@ -517,6 +519,148 @@ async function extractPrimaryArticleImage(articleUrl: string) {
   return "";
 }
 
+function isGoogleNewsArticleUrl(value: string) {
+  try {
+    const url = new URL(value);
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    return url.hostname === "news.google.com" && pathParts[pathParts.length - 2] === "articles";
+  } catch {
+    return false;
+  }
+}
+
+function readGoogleNewsDecodeParams(html: string) {
+  const tag = html.match(/<div\b[^>]*data-n-a-id=["'][^"']+["'][^>]*>/i)?.[0] ?? "";
+  const id = extractAttribute(tag, "data-n-a-id");
+  const timestamp = Number(extractAttribute(tag, "data-n-a-ts"));
+  const signature = extractAttribute(tag, "data-n-a-sg");
+
+  if (!id || !timestamp || !signature) {
+    return null;
+  }
+
+  return { id, signature, timestamp };
+}
+
+function extractDecodedGoogleNewsUrl(responseText: string) {
+  const marker = '[\\"garturlres\\",\\"';
+  const startIndex = responseText.indexOf(marker);
+  if (startIndex === -1) {
+    return "";
+  }
+
+  const start = responseText.slice(startIndex + marker.length);
+  const endIndex = start.indexOf('\\",');
+  if (endIndex === -1) {
+    return "";
+  }
+
+  try {
+    return JSON.parse(`"${start.slice(0, endIndex)}"`) as string;
+  } catch {
+    return start.slice(0, endIndex).replace(/\\\//g, "/");
+  }
+}
+
+async function decodeGoogleNewsArticleUrl(articleUrl: string) {
+  if (!isGoogleNewsArticleUrl(articleUrl)) {
+    return articleUrl;
+  }
+
+  const now = Date.now();
+  const cached = googleNewsUrlCache.get(articleUrl);
+  if (cached && cached.expiresAt > now) {
+    return cached.url || articleUrl;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ARTICLE_IMAGE_TIMEOUT_MS);
+
+  try {
+    const pageResponse = await fetch(articleUrl, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "sk-SK,sk;q=0.9,en;q=0.8",
+        "User-Agent": "Mozilla/5.0 BakyNews/1.0",
+      },
+      signal: controller.signal,
+    });
+
+    if (!pageResponse.ok) {
+      throw new Error(`Google News page failed with ${pageResponse.status}`);
+    }
+
+    const params = readGoogleNewsDecodeParams(await pageResponse.text());
+    if (!params) {
+      throw new Error("Google News decode params missing");
+    }
+
+    const requestPayload = [
+      "garturlreq",
+      [["X", "X", ["X", "X"], null, null, 1, 1, "US:en", null, 1, null, null, null, null, null, 0, 1], "X", "X", 1, [1, 1, 1], 1, 1, null, 0, 0, null, 0],
+      params.id,
+      params.timestamp,
+      params.signature,
+    ];
+    const batchPayload = [[["Fbv4je", JSON.stringify(requestPayload), null]]];
+    const decodeResponse = await fetch("https://news.google.com/_/DotsSplashUi/data/batchexecute", {
+      body: new URLSearchParams({ "f.req": JSON.stringify(batchPayload) }).toString(),
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        "User-Agent": "Mozilla/5.0 BakyNews/1.0",
+      },
+      method: "POST",
+      signal: controller.signal,
+    });
+
+    if (!decodeResponse.ok) {
+      throw new Error(`Google News decode failed with ${decodeResponse.status}`);
+    }
+
+    const decodedUrl = extractDecodedGoogleNewsUrl(await decodeResponse.text());
+    if (!decodedUrl) {
+      throw new Error("Google News decoded URL missing");
+    }
+
+    googleNewsUrlCache.set(articleUrl, {
+      expiresAt: now + GOOGLE_NEWS_DECODE_CACHE_MS,
+      url: decodedUrl,
+    });
+    return decodedUrl;
+  } catch (error) {
+    console.warn(`Google News URL decode failed (${articleUrl})`, error);
+    googleNewsUrlCache.set(articleUrl, {
+      expiresAt: now + 10 * 60 * 1000,
+      url: "",
+    });
+    return articleUrl;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function enrichSearchArticleImages(articles: NewsArticle[], provider: FeedCandidate["provider"]) {
+  if (provider !== "google-news") {
+    return articles;
+  }
+
+  const priorityArticles = articles.slice(0, ARTICLE_IMAGE_ENRICHMENT_LIMIT);
+  const enrichedPriorityArticles = await Promise.all(
+    priorityArticles.map(async (article) => {
+      const resolvedUrl = await decodeGoogleNewsArticleUrl(article.url);
+      const imageUrl = await extractPrimaryArticleImage(resolvedUrl);
+
+      return {
+        ...article,
+        url: resolvedUrl,
+        urlToImage: imageUrl || article.urlToImage,
+      };
+    })
+  );
+
+  return [...enrichedPriorityArticles, ...articles.slice(ARTICLE_IMAGE_ENRICHMENT_LIMIT)];
+}
+
 async function enrichGeneralArticleImages(
   articles: NewsArticle[],
   category: Category,
@@ -730,6 +874,10 @@ function scoreArticle(article: NewsArticle, tokens: string[]) {
   return tokens.reduce((score, token) => score + (haystack.includes(token) ? 1 : 0), 0);
 }
 
+function prioritizeArticlesWithImages(articles: NewsArticle[]) {
+  return [...articles].sort((left, right) => Number(Boolean(right.urlToImage)) - Number(Boolean(left.urlToImage)));
+}
+
 async function fetchCandidate(candidate: FeedCandidate) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 4500);
@@ -758,8 +906,15 @@ async function fetchSearchArticles(candidates: FeedCandidate[], query: string) {
     try {
       const articles = filterArticlesByQuery(dedupeArticles(await fetchCandidate(candidate)), query);
       if (articles.length) {
+        const rankedArticles = rankArticles(articles, "all", query).slice(0, 36);
+        const enrichedArticles = await enrichSearchArticleImages(rankedArticles, candidate.provider);
+        const imageFirstArticles = prioritizeArticlesWithImages(enrichedArticles);
+        if (candidate.provider === "google-news" && !imageFirstArticles.slice(0, ARTICLE_IMAGE_ENRICHMENT_LIMIT).some((article) => article.urlToImage)) {
+          continue;
+        }
+
         return {
-          articles: rankArticles(articles, "all", query).slice(0, 36),
+          articles: imageFirstArticles,
           sourceMode: candidate.provider ?? "search-rss",
         };
       }
