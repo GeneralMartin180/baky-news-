@@ -42,7 +42,7 @@ export function CategoryFilter({
             type="button"
             onClick={() => onCategoryChange(category.id)}
             className={cn(
-              'news-pressable inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-medium',
+              'news-pressable inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-medium sm:h-10 sm:gap-2 sm:px-4 sm:text-sm',
               isActive
                 ? 'bg-white text-slate-950 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_10px_20px_-18px_rgba(15,23,42,0.28)]'
                 : 'text-slate-600 hover:bg-white/80 hover:text-slate-950'

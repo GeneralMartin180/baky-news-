@@ -251,7 +251,7 @@ export function FeedSettingsModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[110] flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-sm sm:items-center sm:p-4"
           onClick={onClose}
         >
           <motion.div
@@ -259,19 +259,19 @@ export function FeedSettingsModal({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.985 }}
             transition={{ duration: 0.2 }}
-            className="news-card-shadow flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-slate-200/80 bg-white"
+            className="news-card-shadow flex h-[100dvh] max-h-[100dvh] w-full max-w-2xl flex-col overflow-hidden rounded-none border border-slate-200/80 bg-white sm:h-auto sm:max-h-[calc(100vh-2rem)] sm:rounded-lg"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="news-glass flex shrink-0 items-center justify-between border-b border-slate-200/80 px-5 py-4 sm:px-6">
-              <div className="flex items-center gap-3">
-                <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+            <div className="news-glass flex shrink-0 items-center justify-between border-b border-slate-200/80 px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-6 sm:py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 sm:h-11 sm:w-11">
                   <Settings2 className="h-5 w-5" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-lg font-semibold text-slate-950">
                     Nastavenia feedu
                   </h2>
-                  <p className="text-sm text-slate-500">
+                  <p className="hidden text-sm text-slate-500 sm:block">
                     Jazyk, poloha, lokálna edícia a tempo automatického obnovovania.
                   </p>
                 </div>
@@ -287,7 +287,7 @@ export function FeedSettingsModal({
               </button>
             </div>
 
-            <div className="space-y-6 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
+            <div className="space-y-5 overflow-y-auto px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-2">
                   <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
@@ -475,7 +475,7 @@ export function FeedSettingsModal({
               </div>
             </div>
 
-            <div className="flex shrink-0 items-center justify-between border-t border-slate-200/80 px-5 py-4 sm:px-6">
+            <div className="flex shrink-0 flex-col gap-3 border-t border-slate-200/80 px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pb-4">
               <button
                 type="button"
                 onClick={() => commitSettings(DEFAULT_SETTINGS)}
@@ -484,18 +484,18 @@ export function FeedSettingsModal({
                 Reset na default
               </button>
 
-              <div className="flex items-center gap-2">
+              <div className="flex w-full items-center gap-2 sm:w-auto">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="news-pressable inline-flex h-10 items-center rounded-full border border-slate-200/80 bg-white px-4 text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                  className="news-pressable inline-flex h-10 flex-1 items-center justify-center rounded-full border border-slate-200/80 bg-white px-4 text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50 sm:flex-none"
                 >
                   Zrušiť
                 </button>
                 <button
                   type="button"
                   onClick={handleSave}
-                  className="news-pressable inline-flex h-10 items-center rounded-full bg-slate-950 px-4 text-sm font-medium text-white shadow-[0_12px_24px_-20px_rgba(15,23,42,0.9)] hover:bg-slate-800"
+                  className="news-pressable inline-flex h-10 flex-1 items-center justify-center rounded-full bg-slate-950 px-4 text-sm font-medium text-white shadow-[0_12px_24px_-20px_rgba(15,23,42,0.9)] hover:bg-slate-800 sm:flex-none"
                 >
                   Uložiť nastavenia
                 </button>

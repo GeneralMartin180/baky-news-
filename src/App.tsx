@@ -190,7 +190,7 @@ function FeedLeadStory({ article, onSelect }: FeedLeadStoryProps) {
       onClick={() => onSelect(article)}
       className="group news-card-shadow news-pressable grid w-full overflow-hidden rounded-lg border border-slate-200/80 bg-white text-left lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.95fr)]"
     >
-      <div className="relative min-h-[280px] overflow-hidden bg-slate-100 lg:min-h-[440px]">
+      <div className="relative min-h-[210px] overflow-hidden bg-slate-100 sm:min-h-[280px] lg:min-h-[440px]">
         {showImage ? (
           <img
             src={article.urlToImage}
@@ -205,7 +205,7 @@ function FeedLeadStory({ article, onSelect }: FeedLeadStoryProps) {
           </div>
         )}
 
-        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-5 py-5">
+        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-4 py-4 sm:px-5 sm:py-5">
           <span className="rounded-full bg-slate-950/78 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-white backdrop-blur-sm">
             Top story
           </span>
@@ -213,7 +213,7 @@ function FeedLeadStory({ article, onSelect }: FeedLeadStoryProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/20 via-slate-950/4 to-transparent" />
       </div>
 
-      <div className="flex flex-col justify-between p-6 sm:p-8">
+      <div className="flex flex-col justify-between p-5 sm:p-8">
         <div>
           <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
             <span className="inline-flex items-center rounded-full border border-slate-200/80 bg-slate-50 px-3 py-1.5">
@@ -221,15 +221,15 @@ function FeedLeadStory({ article, onSelect }: FeedLeadStoryProps) {
             </span>
           </div>
 
-          <h3 className="max-w-3xl font-display text-3xl leading-tight text-slate-950 sm:text-[42px]">
+          <h3 className="max-w-3xl font-display text-2xl leading-tight text-slate-950 sm:text-[42px]">
             {article.title}
           </h3>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
+          <p className="mt-4 max-w-2xl text-[15px] leading-7 text-slate-600 sm:mt-5 sm:text-base">
             {article.description}
           </p>
         </div>
 
-        <div className="mt-8 flex items-center justify-between border-t border-slate-100 pt-5">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-5 sm:mt-8">
           <span className="text-sm font-medium text-slate-900">Otvoriť článok</span>
           <span className="text-xs uppercase tracking-[0.18em] text-slate-400">
             Hlavný výber
@@ -257,7 +257,7 @@ function BriefingItem({ article, onSelect }: BriefingItemProps) {
     <button
       type="button"
       onClick={() => onSelect(article)}
-      className="group news-pressable news-soft-shadow grid w-full grid-cols-[112px_minmax(0,1fr)] gap-4 rounded-lg border border-slate-200/70 bg-slate-50/65 p-2 text-left hover:border-slate-300 hover:bg-white"
+      className="group news-pressable news-soft-shadow grid w-full grid-cols-[88px_minmax(0,1fr)] gap-3 rounded-lg border border-slate-200/70 bg-slate-50/65 p-2 text-left hover:border-slate-300 hover:bg-white sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-4"
     >
       <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-slate-100">
         {showImage ? (
@@ -278,7 +278,7 @@ function BriefingItem({ article, onSelect }: BriefingItemProps) {
         <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
           <span>{formatShortDate(article.publishedAt)}</span>
         </div>
-        <h4 className="mt-2 line-clamp-3 text-[15px] font-semibold leading-6 text-slate-950">
+        <h4 className="mt-2 line-clamp-3 text-sm font-semibold leading-6 text-slate-950 sm:text-[15px]">
           {article.title}
         </h4>
       </div>
@@ -299,7 +299,7 @@ function EditorialPanel({ briefing, localEdition }: EditorialPanelProps) {
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-700">
             {briefing.kicker}
           </p>
-          <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
+          <h3 className="mt-2 text-xl font-semibold text-slate-950 sm:text-2xl">
             {briefing.headline}
           </h3>
           <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -308,7 +308,7 @@ function EditorialPanel({ briefing, localEdition }: EditorialPanelProps) {
         </div>
 
         {localEdition ? (
-          <div className="news-soft-shadow min-w-[220px] rounded-lg border border-sky-100 bg-sky-50/70 px-3.5 py-3">
+          <div className="news-soft-shadow min-w-0 rounded-lg border border-sky-100 bg-sky-50/70 px-3.5 py-3 lg:min-w-[220px]">
             <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-sky-700">
               {localEdition.badge}
             </div>
@@ -581,14 +581,14 @@ export default function App() {
     : `${feedSettings.language.toUpperCase()} / ${feedSettings.region}`;
 
   return (
-    <div className="min-h-screen bg-[#f4f5f7] text-slate-950">
-      <header className="news-glass sticky top-0 z-50 border-b border-slate-200/75">
-        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-4 px-4 py-4 sm:flex-nowrap sm:px-6 lg:px-8">
-          <div className="flex min-w-0 flex-1 items-center gap-4 sm:flex-none">
-            <Logo className="h-12 w-12 shrink-0 sm:h-14 sm:w-14" />
+    <div className="min-h-[100dvh] overflow-x-hidden bg-[#f4f5f7] text-slate-950">
+      <header className="news-glass sticky top-0 z-50 border-b border-slate-200/75 pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-3 px-3 py-3 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
+          <div className="flex min-w-0 flex-1 items-center gap-3 sm:flex-none sm:gap-4">
+            <Logo className="h-10 w-10 shrink-0 sm:h-14 sm:w-14" />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="truncate text-lg font-semibold tracking-tight text-slate-950 sm:text-xl">
+                <h1 className="truncate text-base font-semibold text-slate-950 sm:text-xl">
                   Baky News
                 </h1>
                 <span className="news-soft-shadow hidden rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 sm:inline-flex">
@@ -611,12 +611,12 @@ export default function App() {
             />
           </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={() => setIsSettingsOpen(true)}
               aria-label="Nastavenia feedu"
-              className="news-card-shadow news-pressable inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
+              className="news-card-shadow news-pressable inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 sm:h-11 sm:w-11"
               title={`Nastavenia feedu (${settingsLabel})`}
             >
               <Settings2 className="h-4 w-4" />
@@ -645,7 +645,7 @@ export default function App() {
               type="button"
               onClick={handleRefresh}
               disabled={isLoading}
-              className="news-card-shadow news-pressable inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:scale-100 disabled:opacity-50"
+              className="news-card-shadow news-pressable inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:scale-100 disabled:opacity-50 sm:h-11 sm:w-11"
               title="Obnoviť feed"
             >
               <RotateCcw className="h-4 w-4" />
@@ -654,14 +654,14 @@ export default function App() {
         </div>
 
         <div className="border-t border-slate-200/75 bg-white/72">
-          <div className="mx-auto flex w-full max-w-7xl items-center gap-3 overflow-x-auto px-4 py-3 sm:px-6 lg:px-8">
+          <div className="no-scrollbar mx-auto flex w-full max-w-7xl items-center gap-2 overflow-x-auto px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3 lg:px-8">
             <button
               type="button"
               onClick={() => {
                 setCategory('general');
                 resetSearch();
               }}
-              className="news-card-shadow news-pressable inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900"
+              className="news-card-shadow news-pressable inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 sm:h-10 sm:w-10"
               title="Domov"
             >
               <Home className="h-4 w-4" />
@@ -677,7 +677,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-10 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-7 px-3 py-5 sm:gap-10 sm:px-6 sm:py-8 lg:px-8">
         {error ? (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
@@ -708,7 +708,7 @@ export default function App() {
                     <p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-700">
                       {feedMeta.kicker}
                     </p>
-                    <h2 className="mt-3 max-w-4xl font-display text-4xl leading-tight text-slate-950 sm:text-5xl">
+                    <h2 className="mt-3 max-w-4xl font-display text-3xl leading-tight text-slate-950 sm:text-5xl">
                       {feedMeta.title}
                     </h2>
                     <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-[15px]">
@@ -869,7 +869,7 @@ export default function App() {
                   <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
                     Pokračovanie feedu
                   </p>
-                  <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+                  <h3 className="mt-2 text-2xl font-semibold text-slate-950">
                     Ďalšie správy
                   </h3>
                 </div>
@@ -915,7 +915,7 @@ export default function App() {
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400">
               <Search className="h-6 w-6" />
             </div>
-            <h3 className="mt-6 text-2xl font-semibold tracking-tight text-slate-950">
+            <h3 className="mt-6 text-2xl font-semibold text-slate-950">
               Žiadne výsledky
             </h3>
             <p className="mt-3 max-w-md text-sm leading-7 text-slate-500">
@@ -942,7 +942,7 @@ export default function App() {
             </span>
             <span>Wikipedia kontext sa zobrazuje len pri vyhľadávaní.</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span>Editoriálny briefing + lokálna edícia</span>
             <span>© 2024 Baky News</span>
           </div>

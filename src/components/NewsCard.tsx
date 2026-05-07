@@ -69,22 +69,22 @@ export function NewsCard({ article, index, onSelect }: NewsCardProps) {
         <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/22 via-slate-950/6 to-transparent" />
       </div>
 
-      <div className="flex flex-1 flex-col p-5">
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
             {dateLabel}
           </span>
         </div>
 
-        <h3 className="mt-3 line-clamp-3 text-[21px] font-semibold leading-8 tracking-tight text-slate-950">
+        <h3 className="mt-3 line-clamp-3 text-lg font-semibold leading-7 text-slate-950 sm:text-[21px] sm:leading-8">
           {article.title}
         </h3>
 
-        <p className="mt-3 line-clamp-4 flex-1 text-sm leading-7 text-slate-600">
+        <p className="mt-3 line-clamp-3 flex-1 text-sm leading-6 text-slate-600 sm:line-clamp-4 sm:leading-7">
           {article.description}
         </p>
 
-        <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-sm">
+        <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 text-sm sm:mt-5">
           <span className="font-medium text-slate-900">Čítať viac</span>
           <ExternalLink className="h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
         </div>

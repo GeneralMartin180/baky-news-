@@ -68,7 +68,7 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm sm:p-6"
+        className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-sm sm:items-center sm:p-6"
         onClick={onClose}
       >
         <motion.div
@@ -76,10 +76,10 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.985, y: 18 }}
           transition={{ duration: 0.2 }}
-          className="news-card-shadow relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-slate-200/80 bg-white"
+          className="news-card-shadow relative flex h-[100dvh] max-h-[100dvh] w-full max-w-5xl flex-col overflow-hidden rounded-none border border-slate-200/80 bg-white sm:h-auto sm:max-h-[92vh] sm:rounded-lg"
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="news-glass flex items-center justify-between border-b border-slate-200/80 px-5 py-4 sm:px-6">
+          <div className="news-glass flex items-center justify-between border-b border-slate-200/80 px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-6 sm:py-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-3 py-1.5">
@@ -112,7 +112,7 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
 
           <div className="overflow-y-auto">
             {article.urlToImage && !imageFailed ? (
-              <div className="aspect-[21/9] w-full overflow-hidden bg-slate-100">
+              <div className="aspect-[16/10] w-full overflow-hidden bg-slate-100 sm:aspect-[21/9]">
                 <img
                   src={article.urlToImage}
                   alt={article.title}
@@ -123,12 +123,12 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
               </div>
             ) : null}
 
-            <div className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-8 sm:py-10">
-              <h2 className="font-display text-3xl leading-tight text-slate-950 sm:text-4xl">
+            <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-8 sm:py-10">
+              <h2 className="font-display text-2xl leading-tight text-slate-950 sm:text-4xl">
                 {article.title}
               </h2>
 
-              <p className="mt-6 border-l-2 border-slate-200 pl-5 text-lg leading-8 text-slate-600">
+              <p className="mt-5 border-l-2 border-slate-200 pl-4 text-base leading-7 text-slate-600 sm:mt-6 sm:pl-5 sm:text-lg sm:leading-8">
                 {article.description}
               </p>
 

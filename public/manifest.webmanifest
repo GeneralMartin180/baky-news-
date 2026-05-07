@@ -1,0 +1,25 @@
+{
+  "name": "Baky News",
+  "short_name": "Baky News",
+  "description": "Rychly a citatelny prehlad sprav.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f5f7",
+  "theme_color": "#f8fafc",
+  "icons": [
+    {
+      "src": "/baky_news-removebg-preview.png",
+      "sizes": "500x500",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/baky_news-removebg-preview.png",
+      "sizes": "500x500",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
