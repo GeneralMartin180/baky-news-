@@ -11,6 +11,7 @@ import type {
 
 type FeedCandidate = {
   label: string;
+  provider?: "google-news" | "yahoo-news";
   sourceName: string;
   url: string;
 };
@@ -225,6 +226,38 @@ function isSlovakEdition(language: LanguageCode, region: RegionCode) {
   return language === "sk" && region === "SK";
 }
 
+function buildGoogleNewsSearchUrl(query: string, language: LanguageCode, region: RegionCode) {
+  const url = new URL("https://news.google.com/rss/search");
+  url.searchParams.set("q", query);
+  url.searchParams.set("hl", language);
+  url.searchParams.set("gl", region);
+  url.searchParams.set("ceid", `${region}:${language}`);
+  return url.toString();
+}
+
+function buildYahooNewsSearchUrl(query: string) {
+  const url = new URL("https://news.yahoo.com/rss/search");
+  url.searchParams.set("p", query);
+  return url.toString();
+}
+
+function buildSearchCandidates(options: FeedOptions): FeedCandidate[] {
+  return [
+    {
+      label: "google-news-search",
+      provider: "google-news",
+      sourceName: "Google News",
+      url: buildGoogleNewsSearchUrl(options.query, options.language, options.region),
+    },
+    {
+      label: "yahoo-news-search",
+      provider: "yahoo-news",
+      sourceName: "Yahoo News",
+      url: buildYahooNewsSearchUrl(options.query),
+    },
+  ];
+}
+
 function dedupeCandidates(candidates: FeedCandidate[]) {
   const seen = new Set<string>();
   return candidates.filter((candidate) => {
@@ -235,17 +268,17 @@ function dedupeCandidates(candidates: FeedCandidate[]) {
 }
 
 function buildCandidates(options: FeedOptions): FeedCandidate[] {
+  if (options.query) {
+    return buildSearchCandidates(options);
+  }
+
   const slovakCandidates = isSlovakEdition(options.language, options.region)
-    ? options.query
-      ? Object.values(SLOVAK_FEEDS).flat()
-      : [
-          ...(SLOVAK_FEEDS[options.category] ?? []),
-          ...(options.category === "general" ? [SLOVAK_FEEDS.business[0], SLOVAK_FEEDS.technology[0], SLOVAK_FEEDS.sports[0]] : []),
-        ]
+    ? [
+        ...(SLOVAK_FEEDS[options.category] ?? []),
+        ...(options.category === "general" ? [SLOVAK_FEEDS.business[0], SLOVAK_FEEDS.technology[0], SLOVAK_FEEDS.sports[0]] : []),
+      ]
     : [];
-  const globalCandidates = options.query
-    ? Object.values(BBC_FEEDS).flat()
-    : [...(BBC_FEEDS[options.category] ?? BBC_FEEDS.general), ...BBC_FEEDS.general];
+  const globalCandidates = [...(BBC_FEEDS[options.category] ?? BBC_FEEDS.general), ...BBC_FEEDS.general];
 
   return dedupeCandidates([
     ...slovakCandidates,
@@ -276,6 +309,21 @@ function firstMatch(value: string, pattern: RegExp) {
 
 function extractAttribute(tag: string, name: string) {
   return decodeHtml(tag.match(new RegExp(`${name}=["']([^"']+)["']`, "i"))?.[1] ?? "");
+}
+
+function extractItemSourceName(item: string, title: string, fallback: string) {
+  const sourceName = firstMatch(item, /<source\b[^>]*>([\s\S]*?)<\/source>/i);
+  if (sourceName) {
+    return sourceName;
+  }
+
+  const titleSource = title.match(/\s+-\s+([^-]+)$/)?.[1]?.trim();
+  return titleSource || fallback;
+}
+
+function cleanItemTitle(title: string, sourceName: string) {
+  const suffix = ` - ${sourceName}`;
+  return title.endsWith(suffix) ? title.slice(0, -suffix.length).trim() : title;
 }
 
 function extractPulseCmsImage(value: string) {
@@ -585,16 +633,17 @@ function parseItems(xml: string, candidate: FeedCandidate): NewsArticle[] {
         return null;
       }
 
+      const sourceName = extractItemSourceName(item, title, candidate.sourceName);
       const description = stripTags(descriptionMarkup);
       return {
-        title,
+        title: cleanItemTitle(title, sourceName),
         description:
           description.length > 8
             ? `${description.slice(0, 240)}${description.length > 240 ? "..." : ""}`
             : "Kliknite pre zobrazenie celeho clanku a podrobnosti.",
         publishedAt: pubDate || new Date().toUTCString(),
         source: {
-          name: candidate.sourceName,
+          name: sourceName,
         },
         url: link,
         urlToImage: extractImageFromItem(item, link || candidate.url),
@@ -704,12 +753,41 @@ async function fetchCandidate(candidate: FeedCandidate) {
   }
 }
 
+async function fetchSearchArticles(candidates: FeedCandidate[], query: string) {
+  for (const candidate of candidates) {
+    try {
+      const articles = filterArticlesByQuery(dedupeArticles(await fetchCandidate(candidate)), query);
+      if (articles.length) {
+        return {
+          articles: rankArticles(articles, "all", query).slice(0, 36),
+          sourceMode: candidate.provider ?? "search-rss",
+        };
+      }
+    } catch (error) {
+      console.warn(`Search candidate failed (${candidate.label})`, error);
+    }
+  }
+
+  return {
+    articles: [],
+    sourceMode: "search-empty",
+  };
+}
+
 async function fetchArticles(
   candidates: FeedCandidate[],
   query: string,
   localEdition: LocalEdition,
   category: Category
 ) {
+  if (query) {
+    const searchResult = await fetchSearchArticles(candidates, query);
+    return {
+      articles: searchResult.articles,
+      sourceMode: searchResult.sourceMode,
+    };
+  }
+
   const fetchedArticles: NewsArticle[] = [];
   let sourceMode = "rss";
 
