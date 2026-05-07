@@ -59,11 +59,11 @@ export function SearchBar({
           <button
             type="submit"
             disabled={isLoading || !value.trim()}
-            className="news-pressable inline-flex h-10 items-center gap-2 rounded-full bg-slate-950 px-4 text-sm font-medium text-white shadow-[0_10px_22px_-18px_rgba(15,23,42,0.9)] hover:bg-slate-800 disabled:cursor-not-allowed disabled:scale-100 disabled:bg-slate-300 disabled:shadow-none"
+            className="news-pressable group inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-[0_10px_22px_-18px_rgba(15,23,42,0.9)] hover:bg-slate-800 disabled:cursor-not-allowed disabled:scale-100 disabled:bg-slate-300 disabled:shadow-none"
             aria-label="Hľadať"
+            title="Hľadať"
           >
-            <Search className="h-4 w-4 sm:hidden" />
-            <span className="hidden sm:inline">Hľadať</span>
+            <Search className="h-4 w-4 transition-transform duration-200 ease-out group-hover:scale-110" />
           </button>
         </div>
       </div>
