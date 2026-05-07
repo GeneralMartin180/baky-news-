@@ -316,44 +316,57 @@ export function FeedSettingsModal({
                   </select>
                 </label>
 
-                <div className="space-y-2">
-                  <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
-                    <MapPinned className="h-4 w-4 text-sky-700" />
-                    Poloha
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleLocationToggle}
-                    disabled={isResolvingLocation}
-                    className={cn(
-                      'news-pressable flex h-11 w-full items-center justify-between rounded-full border px-4 text-sm font-medium disabled:cursor-wait disabled:scale-100',
-                      draft.useLocation
-                        ? 'border-slate-900 bg-slate-900 text-white'
-                        : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
-                    )}
-                  >
-                    <span>{isResolvingLocation ? 'Načítavam polohu' : 'Povoliť polohu'}</span>
-                    <span
+                <div className="rounded-lg border border-slate-200/80 bg-white px-4 py-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-950">
+                        <MapPinned className="h-4 w-4 text-sky-700" />
+                        Povoliť polohu
+                      </span>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">
+                        Podľa polohy sa nastaví počasie, feed aj lokálne zoradenie správ.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={draft.useLocation}
+                      aria-label={draft.useLocation ? 'Vypnúť polohu' : 'Povoliť polohu'}
+                      onClick={handleLocationToggle}
+                      disabled={isResolvingLocation}
                       className={cn(
-                        'relative h-6 w-11 rounded-full transition-colors',
-                        draft.useLocation ? 'bg-emerald-400' : 'bg-slate-200'
+                        'news-pressable relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border transition-colors disabled:cursor-wait disabled:scale-100',
+                        draft.useLocation
+                          ? 'border-emerald-500 bg-emerald-500'
+                          : 'border-slate-300 bg-slate-200 hover:border-slate-400'
                       )}
                     >
                       <span
                         className={cn(
-                          'absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform',
-                          draft.useLocation ? 'translate-x-6' : 'translate-x-1'
+                          'absolute h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200',
+                          draft.useLocation ? 'translate-x-7' : 'translate-x-1'
                         )}
                       />
+                    </button>
+                  </div>
+
+                  <div className="mt-3 flex min-h-5 flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                    <span
+                      className={cn(
+                        'font-semibold',
+                        draft.useLocation ? 'text-emerald-700' : 'text-slate-500'
+                      )}
+                    >
+                      {isResolvingLocation ? 'Načítavam polohu' : draft.useLocation ? 'Zapnuté' : 'Vypnuté'}
                     </span>
-                  </button>
-                  <p className="text-xs leading-5 text-slate-500">
-                    {draft.useLocation && draft.location?.label
-                      ? `Aktívne: ${draft.location.label}`
-                      : 'Po povolení sa podľa polohy nastaví počasie, feed aj lokálne zoradenie správ.'}
-                  </p>
+                    {draft.useLocation && draft.location?.label ? (
+                      <span className="text-slate-500">Aktívne: {draft.location.label}</span>
+                    ) : null}
+                  </div>
+
                   {locationError ? (
-                    <p className="text-xs leading-5 text-rose-600">{locationError}</p>
+                    <p className="mt-2 text-xs leading-5 text-rose-600">{locationError}</p>
                   ) : null}
                 </div>
               </div>
