@@ -17,22 +17,15 @@ body,
 }
 
 html {
-  overflow-x: hidden;
   text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
-}
-
-body,
-#root {
-  min-height: 100dvh;
 }
 
 body {
   @apply text-slate-900 antialiased;
   background-color: #f4f5f7;
   background-image: linear-gradient(180deg, #fbfcfe 0%, #f5f7fb 18%, #f4f5f7 100%);
-  overflow-x: hidden;
-  overscroll-behavior-y: contain;
+  min-width: 320px;
 }
 
 ::selection {

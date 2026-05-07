@@ -581,8 +581,8 @@ export default function App() {
     : `${feedSettings.language.toUpperCase()} / ${feedSettings.region}`;
 
   return (
-    <div className="min-h-[100dvh] overflow-x-hidden bg-[#f4f5f7] text-slate-950">
-      <header className="news-glass sticky top-0 z-50 border-b border-slate-200/75 pt-[env(safe-area-inset-top)]">
+    <div className="min-h-screen bg-[#f4f5f7] text-slate-950">
+      <header className="news-glass z-50 border-b border-slate-200/75 pt-[env(safe-area-inset-top)] sm:sticky sm:top-0">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-3 px-3 py-3 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:flex-none sm:gap-4">
             <Logo className="h-10 w-10 shrink-0 sm:h-14 sm:w-14" />
