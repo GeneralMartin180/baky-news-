@@ -236,16 +236,20 @@ function dedupeCandidates(candidates: FeedCandidate[]) {
 
 function buildCandidates(options: FeedOptions): FeedCandidate[] {
   const slovakCandidates = isSlovakEdition(options.language, options.region)
-    ? [
-        ...(SLOVAK_FEEDS[options.category] ?? []),
-        ...(options.category === "general" ? [SLOVAK_FEEDS.business[0], SLOVAK_FEEDS.technology[0], SLOVAK_FEEDS.sports[0]] : []),
-      ]
+    ? options.query
+      ? Object.values(SLOVAK_FEEDS).flat()
+      : [
+          ...(SLOVAK_FEEDS[options.category] ?? []),
+          ...(options.category === "general" ? [SLOVAK_FEEDS.business[0], SLOVAK_FEEDS.technology[0], SLOVAK_FEEDS.sports[0]] : []),
+        ]
     : [];
+  const globalCandidates = options.query
+    ? Object.values(BBC_FEEDS).flat()
+    : [...(BBC_FEEDS[options.category] ?? BBC_FEEDS.general), ...BBC_FEEDS.general];
 
   return dedupeCandidates([
     ...slovakCandidates,
-    ...(BBC_FEEDS[options.category] ?? BBC_FEEDS.general),
-    ...BBC_FEEDS.general,
+    ...globalCandidates,
   ]);
 }
 
@@ -609,6 +613,34 @@ function normalizeText(value: string) {
     .trim();
 }
 
+function getSearchTokens(query: string) {
+  return normalizeText(query)
+    .split(" ")
+    .filter((token) => token.length > 1);
+}
+
+function articleMatchesQuery(article: NewsArticle, tokens: string[]) {
+  if (!tokens.length) {
+    return true;
+  }
+
+  const haystack = normalizeText(`${article.title} ${article.description} ${article.source.name}`);
+  return tokens.every((token) => haystack.includes(token));
+}
+
+function filterArticlesByQuery(articles: NewsArticle[], query: string) {
+  const tokens = getSearchTokens(query);
+  if (!query.trim()) {
+    return articles;
+  }
+
+  if (!tokens.length) {
+    return [];
+  }
+
+  return articles.filter((article) => articleMatchesQuery(article, tokens));
+}
+
 function dedupeArticles(articles: NewsArticle[]) {
   const seenUrls = new Set<string>();
   const seenTitles = new Set<string>();
@@ -635,9 +667,7 @@ function dedupeArticles(articles: NewsArticle[]) {
 
 function rankArticles(articles: NewsArticle[], localEdition: LocalEdition, query: string) {
   const localQuery = localEdition !== "all" && !query ? LOCAL_EDITIONS[localEdition]?.query ?? "" : query;
-  const tokens = normalizeText(localQuery)
-    .split(" ")
-    .filter((token) => token.length > 2);
+  const tokens = getSearchTokens(localQuery);
 
   if (!tokens.length) {
     return articles;
@@ -699,7 +729,8 @@ async function fetchArticles(
     }
   }
 
-  const ranked = rankArticles(dedupeArticles(fetchedArticles), localEdition, query).slice(0, 36);
+  const filtered = filterArticlesByQuery(dedupeArticles(fetchedArticles), query);
+  const ranked = rankArticles(filtered, localEdition, query).slice(0, 36);
   const articles = await enrichGeneralArticleImages(ranked, category, query);
   return {
     articles,
