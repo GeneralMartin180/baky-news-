@@ -638,7 +638,7 @@ export default function App() {
               className="news-card-shadow news-pressable inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:scale-100 disabled:opacity-50"
               title="Obnoviť feed"
             >
-              <RotateCcw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
+              <RotateCcw className="h-4 w-4" />
             </button>
           </div>
         </div>

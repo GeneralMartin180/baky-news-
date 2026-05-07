@@ -1,6 +1,6 @@
 import { FormEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Loader2, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 interface SearchBarProps {
   value: string;
@@ -28,11 +28,7 @@ export function SearchBar({
     <form onSubmit={handleSubmit} className="relative">
       <div className="news-card-shadow flex h-[52px] items-center rounded-full border border-slate-200/80 bg-white px-2 pl-4 transition-[border-color,box-shadow] duration-200 focus-within:border-slate-300 focus-within:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_18px_36px_-28px_rgba(15,23,42,0.22)]">
         <div className="text-slate-400">
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Search className="h-4 w-4" />
-          )}
+          <Search className="h-4 w-4" />
         </div>
 
         <input
