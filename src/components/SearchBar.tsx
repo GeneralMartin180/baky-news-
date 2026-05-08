@@ -32,9 +32,12 @@ export function SearchBar({
         </div>
 
         <input
-          type="text"
+          type="search"
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          inputMode="search"
+          enterKeyHint="search"
+          spellCheck={false}
           placeholder="Hľadať správy, témy alebo osoby"
           className="h-full min-w-0 flex-1 bg-transparent px-2 text-sm text-slate-950 outline-none placeholder:text-slate-400 sm:px-3 sm:text-[15px]"
         />

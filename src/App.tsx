@@ -6,6 +6,7 @@ import {
   Home,
   LayoutGrid,
   MapPinned,
+  Navigation,
   Newspaper,
   RotateCcw,
   Search,
@@ -33,6 +34,11 @@ import { NewsCard } from './components/NewsCard';
 import { SearchBar } from './components/SearchBar';
 import { WeatherWidget } from './components/WeatherWidget';
 import { WikiCard } from './components/WikiCard';
+import {
+  resolveCurrentLocationPreference,
+  supportsGeolocation,
+  withDetectedLocation,
+} from './lib/location';
 import { cn } from './lib/utils';
 
 const FEED_SETTINGS_STORAGE_KEY = 'baky-news-feed-settings';
@@ -291,6 +297,64 @@ interface EditorialPanelProps {
   localEdition: LocalEditionSummary | null;
 }
 
+interface LocationSetupCardProps {
+  error: string | null;
+  isLoading: boolean;
+  onEnable: () => void;
+  onOpenSettings: () => void;
+}
+
+function LocationSetupCard({
+  error,
+  isLoading,
+  onEnable,
+  onOpenSettings,
+}: LocationSetupCardProps) {
+  return (
+    <section className="news-card-shadow overflow-hidden rounded-[24px] border border-sky-200/80 bg-[linear-gradient(135deg,rgba(240,249,255,0.96)_0%,rgba(236,253,245,0.88)_100%)] p-5 sm:p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="max-w-2xl">
+          <span className="inline-flex items-center gap-2 rounded-full border border-sky-200/80 bg-white/80 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-sky-700">
+            <Navigation className="h-3.5 w-3.5" />
+            Presná poloha
+          </span>
+          <h3 className="mt-4 text-xl font-semibold leading-tight text-slate-950 sm:text-2xl">
+            Počasie a lokálne správy podľa miesta
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-[15px]">
+            Jedným klikom nastavíme polohu, počasie aj lokálny feed bez ručného
+            vyberania regiónu.
+          </p>
+        </div>
+
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[220px]">
+          <button
+            type="button"
+            onClick={onEnable}
+            disabled={isLoading}
+            className="news-pressable inline-flex h-11 items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-medium text-white shadow-[0_12px_24px_-20px_rgba(15,23,42,0.9)] hover:bg-slate-800 disabled:cursor-wait disabled:scale-100 disabled:bg-slate-400"
+          >
+            {isLoading ? 'Načítavam polohu' : 'Použiť moju polohu'}
+          </button>
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="news-pressable inline-flex h-10 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 px-4 text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-white"
+          >
+            Otvoriť nastavenia
+          </button>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {error}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function EditorialPanel({ briefing, localEdition }: EditorialPanelProps) {
   return (
     <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-4 sm:p-5">
@@ -401,8 +465,10 @@ export default function App() {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isResolvingLocation, setIsResolvingLocation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [locationActionError, setLocationActionError] = useState<string | null>(null);
   const [visibleArticlesCount, setVisibleArticlesCount] = useState(12);
   const [signalMode, setSignalMode] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
@@ -432,6 +498,12 @@ export default function App() {
   useEffect(() => {
     window.localStorage.setItem(FEED_SETTINGS_STORAGE_KEY, JSON.stringify(feedSettings));
   }, [feedSettings]);
+
+  useEffect(() => {
+    if (feedSettings.useLocation) {
+      setLocationActionError(null);
+    }
+  }, [feedSettings.useLocation]);
 
   const loadData = useCallback(
     async (nextCategory: Category, query: string = '', refresh: boolean = false) => {
@@ -570,6 +642,25 @@ export default function App() {
     loadData(category, searchQuery, true);
   };
 
+  const handleEnableLocation = async () => {
+    setLocationActionError(null);
+
+    if (!supportsGeolocation()) {
+      setLocationActionError('Tento prehliadač nepodporuje polohu.');
+      return;
+    }
+
+    setIsResolvingLocation(true);
+    try {
+      const location = await resolveCurrentLocationPreference();
+      setFeedSettings((current) => withDetectedLocation(current, location));
+    } catch {
+      setLocationActionError('Poloha nebola povolená alebo sa ju nepodarilo načítať.');
+    } finally {
+      setIsResolvingLocation(false);
+    }
+  };
+
   const visibleArticles = filteredArticles.slice(0, visibleArticlesCount);
   const leadArticle = visibleArticles[0] ?? null;
   const briefingArticles = visibleArticles.slice(1, 5);
@@ -579,6 +670,8 @@ export default function App() {
   const settingsLabel = feedSettings.useLocation && feedSettings.location?.label
     ? `${feedSettings.language.toUpperCase()} / ${feedSettings.location.label}`
     : `${feedSettings.language.toUpperCase()} / ${feedSettings.region}`;
+  const shouldShowLocationSetup =
+    !feedSettings.useLocation && !searchQuery && category === 'general';
 
   return (
     <div className="min-h-screen bg-[#f4f5f7] text-slate-950">
@@ -651,6 +744,20 @@ export default function App() {
               <RotateCcw className="h-4 w-4" />
             </button>
           </div>
+
+          {feedSettings.useLocation && feedSettings.location?.label ? (
+            <div className="order-4 basis-full sm:hidden">
+              <div className="news-soft-shadow inline-flex max-w-full items-center gap-2 rounded-full border border-sky-100 bg-sky-50/90 px-3 py-2 text-sm text-sky-800">
+                <MapPinned className="h-4 w-4 shrink-0" />
+                <span className="truncate">{feedSettings.location.label}</span>
+                {weather ? (
+                  <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-700">
+                    {weather.temperatureC}°
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="border-t border-slate-200/75 bg-white/72">
@@ -677,7 +784,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-7 px-3 py-5 sm:gap-10 sm:px-6 sm:py-8 lg:px-8">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-7 px-3 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:gap-10 sm:px-6 sm:py-8 sm:pb-8 lg:px-8">
         {error ? (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
@@ -687,6 +794,15 @@ export default function App() {
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>{error}</p>
           </motion.div>
+        ) : null}
+
+        {shouldShowLocationSetup && !isLoading ? (
+          <LocationSetupCard
+            error={locationActionError}
+            isLoading={isResolvingLocation}
+            onEnable={handleEnableLocation}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+          />
         ) : null}
 
         {isLoading ? (
@@ -933,7 +1049,7 @@ export default function App() {
         onSave={setFeedSettings}
       />
 
-      <footer className="border-t border-slate-200/80 bg-white/72">
+      <footer className="border-t border-slate-200/80 bg-white/72 pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-6 text-sm text-slate-500 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
             <span className="inline-flex items-center gap-2">

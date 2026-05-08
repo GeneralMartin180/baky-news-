@@ -13,10 +13,15 @@ import {
   AutoRefreshMinutes,
   FeedSettings,
   LanguageCode,
-  LocationPreference,
   LocalEdition,
-  RegionCode,
 } from '../types';
+import {
+  hasCoordinates,
+  resolveCurrentLocationPreference,
+  resolveRegionFromLocation,
+  supportsGeolocation,
+  withDetectedLocation,
+} from '../lib/location';
 import { cn } from '../lib/utils';
 
 interface FeedSettingsModalProps {
@@ -32,8 +37,6 @@ const languageOptions: Array<{ label: string; value: LanguageCode }> = [
   { label: 'Čeština', value: 'cs' },
   { label: 'Deutsch', value: 'de' },
 ];
-
-const supportedRegionCodes: RegionCode[] = ['SK', 'US', 'GB', 'CZ', 'DE', 'AT'];
 
 const localEditionOptions: Array<{
   description: string;
@@ -63,7 +66,7 @@ const localEditionOptions: Array<{
   {
     label: 'Rimavská Sobota',
     value: 'rimavska-sobota',
-    description: 'Mesto, okres, služby a dianie v regióne južného stredného Slovenska.',
+    description: 'Mesto, okres, služby a dianie v regióne.',
   },
   {
     label: 'Východ',
@@ -89,69 +92,6 @@ const DEFAULT_SETTINGS: FeedSettings = {
   localEdition: 'all',
   useLocation: false,
 };
-
-function resolveRegionFromLocation(countryCode: string | undefined, fallback: RegionCode): RegionCode {
-  return supportedRegionCodes.includes(countryCode as RegionCode)
-    ? (countryCode as RegionCode)
-    : fallback;
-}
-
-function hasCoordinates(location: LocationPreference | undefined) {
-  return typeof location?.latitude === 'number' && typeof location?.longitude === 'number';
-}
-
-function getCurrentPosition() {
-  return new Promise<GeolocationPosition>((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: false,
-      maximumAge: 10 * 60 * 1000,
-      timeout: 10000,
-    });
-  });
-}
-
-async function reverseGeocodeLocation(
-  latitude: number,
-  longitude: number
-): Promise<LocationPreference> {
-  try {
-    const url = new URL('https://api.bigdatacloud.net/data/reverse-geocode-client');
-    url.searchParams.set('latitude', String(latitude));
-    url.searchParams.set('longitude', String(longitude));
-    url.searchParams.set('localityLanguage', 'sk');
-
-    const response = await fetch(url.toString());
-    if (!response.ok) {
-      throw new Error(`Reverse geocode failed with ${response.status}`);
-    }
-
-    const data = await response.json();
-    const city = data.city || data.locality || data.localityInfo?.administrative?.[3]?.name;
-    const subdivision = data.principalSubdivision || data.localityInfo?.administrative?.[2]?.name;
-    const countryName = data.countryName;
-    const labelParts = [city, subdivision].filter(Boolean);
-    const queryParts = [city, data.locality, subdivision, countryName].filter(Boolean);
-
-    return {
-      countryCode: data.countryCode,
-      enabled: true,
-      label: labelParts.length ? Array.from(new Set(labelParts)).join(', ') : 'Aktuálna poloha',
-      latitude,
-      longitude,
-      query: Array.from(new Set(queryParts)).join(' '),
-      updatedAt: new Date().toISOString(),
-    };
-  } catch {
-    return {
-      enabled: true,
-      label: 'Aktuálna poloha',
-      latitude,
-      longitude,
-      query: '',
-      updatedAt: new Date().toISOString(),
-    };
-  }
-}
 
 export function FeedSettingsModal({
   isOpen,
@@ -201,10 +141,6 @@ export function FeedSettingsModal({
     onSave(normalized);
   };
 
-  const handleSave = () => {
-    onClose();
-  };
-
   const handleLocationToggle = async () => {
     setLocationError(null);
 
@@ -217,26 +153,15 @@ export function FeedSettingsModal({
       return;
     }
 
-    if (!navigator.geolocation) {
+    if (!supportsGeolocation()) {
       setLocationError('Prehliadač nepodporuje zisťovanie polohy.');
       return;
     }
 
     setIsResolvingLocation(true);
     try {
-      const position = await getCurrentPosition();
-      const location = await reverseGeocodeLocation(
-        position.coords.latitude,
-        position.coords.longitude
-      );
-
-      commitSettings({
-        ...draft,
-        localEdition: 'all',
-        location,
-        region: resolveRegionFromLocation(location.countryCode, draft.region),
-        useLocation: true,
-      });
+      const location = await resolveCurrentLocationPreference();
+      commitSettings(withDetectedLocation(draft, location));
     } catch {
       setLocationError('Poloha nebola povolená alebo sa ju nepodarilo načítať.');
     } finally {
@@ -268,9 +193,7 @@ export function FeedSettingsModal({
                   <Settings2 className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-lg font-semibold text-slate-950">
-                    Nastavenia feedu
-                  </h2>
+                  <h2 className="text-lg font-semibold text-slate-950">Nastavenia feedu</h2>
                   <p className="hidden text-sm text-slate-500 sm:block">
                     Jazyk, poloha, lokálna edícia a tempo automatického obnovovania.
                   </p>
@@ -358,7 +281,11 @@ export function FeedSettingsModal({
                         draft.useLocation ? 'text-emerald-700' : 'text-slate-500'
                       )}
                     >
-                      {isResolvingLocation ? 'Načítavam polohu' : draft.useLocation ? 'Zapnuté' : 'Vypnuté'}
+                      {isResolvingLocation
+                        ? 'Načítavam polohu'
+                        : draft.useLocation
+                          ? 'Zapnuté'
+                          : 'Vypnuté'}
                     </span>
                     {draft.useLocation && draft.location?.label ? (
                       <span className="text-slate-500">Aktívne: {draft.location.label}</span>
@@ -375,12 +302,11 @@ export function FeedSettingsModal({
                 <div className="flex items-start gap-3">
                   <Globe2 className="mt-0.5 h-5 w-5 text-slate-400" />
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-950">
-                      Ako to funguje
-                    </h3>
+                    <h3 className="text-sm font-semibold text-slate-950">Ako to funguje</h3>
                     <p className="mt-1 text-sm leading-6 text-slate-500">
-                      Keď povolíte polohu, počasie používa presné súradnice a správy sa zoradia podľa mesta alebo regiónu.
-                      Bez povolenej polohy ostáva dostupná ručná lokálna edícia.
+                      Keď povolíte polohu, počasie používa presné súradnice a správy sa zoradia
+                      podľa mesta alebo regiónu. Bez povolenej polohy ostáva dostupná ručná
+                      lokálna edícia.
                     </p>
                   </div>
                 </div>
@@ -429,7 +355,9 @@ export function FeedSettingsModal({
 
                 {!isLocalEditionEnabled ? (
                   <p className="mt-3 text-sm leading-6 text-slate-500">
-                    Lokálna edícia je dostupná pri ručnom nastavení pre jazyk <strong>Slovenčina</strong>. Pri povolenej polohe sa feed riadi aktuálnou polohou.
+                    Lokálna edícia je dostupná pri ručnom nastavení pre jazyk{' '}
+                    <strong>Slovenčina</strong>. Pri povolenej polohe sa feed riadi aktuálnou
+                    polohou.
                   </p>
                 ) : null}
               </div>
@@ -494,7 +422,7 @@ export function FeedSettingsModal({
                 </button>
                 <button
                   type="button"
-                  onClick={handleSave}
+                  onClick={onClose}
                   className="news-pressable inline-flex h-10 flex-1 items-center justify-center rounded-full bg-slate-950 px-4 text-sm font-medium text-white shadow-[0_12px_24px_-20px_rgba(15,23,42,0.9)] hover:bg-slate-800 sm:flex-none"
                 >
                   Uložiť nastavenia
