@@ -13,7 +13,7 @@ import {
   getDefaultSecurityHeaders,
   isBlockedRequestDecision,
   withArticleContentTokens,
-} from "../server/request-security.ts";
+} from "./_lib/request-security.js";
 
 type FeedCandidate = {
   label: string;

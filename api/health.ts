@@ -1,4 +1,4 @@
-import { enforceRequestPolicy, isBlockedRequestDecision } from "../server/request-security.ts";
+import { enforceRequestPolicy, isBlockedRequestDecision } from "./_lib/request-security.js";
 
 function buildJsonResponse(payload: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(payload), {
