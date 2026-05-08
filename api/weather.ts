@@ -1,5 +1,5 @@
 import type { LanguageCode, LocalEdition, RegionCode, WeatherSnapshot } from "../src/types";
-import { enforceRequestPolicy, isBlockedRequestDecision } from "../server/request-security";
+import { enforceRequestPolicy, isBlockedRequestDecision } from "../server/request-security.ts";
 
 type WeatherLocation = {
   label: string;

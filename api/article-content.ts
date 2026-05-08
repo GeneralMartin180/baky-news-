@@ -2,7 +2,7 @@ import {
   enforceRequestPolicy,
   isBlockedRequestDecision,
   validateArticleContentToken,
-} from "../server/request-security";
+} from "../server/request-security.ts";
 
 function buildJsonResponse(payload: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(payload), {
