@@ -49,9 +49,9 @@ export function NewsCard({ article, index, onSelect }: NewsCardProps) {
       type="button"
       onClick={() => onSelect?.(article)}
       style={{ transitionDelay: `${Math.min(index, 5) * 14}ms` }}
-      className="group news-card-shadow news-pressable flex h-full w-full flex-col overflow-hidden rounded-lg border border-slate-200/80 bg-white text-left"
+      className="group news-card-shadow news-pressable grid h-full w-full grid-cols-[108px_minmax(0,1fr)] overflow-hidden rounded-lg border border-slate-200/80 bg-white text-left sm:flex sm:flex-col"
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+      <div className="relative h-full min-h-[108px] overflow-hidden bg-slate-100 sm:min-h-0 sm:aspect-[4/3]">
         {showImage ? (
           <img
             src={article.urlToImage}
@@ -62,29 +62,29 @@ export function NewsCard({ article, index, onSelect }: NewsCardProps) {
           />
         ) : (
           <div className="flex h-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 text-slate-400">
-            <PlaceholderIcon className="h-10 w-10" strokeWidth={1.5} />
+            <PlaceholderIcon className="h-8 w-8 sm:h-10 sm:w-10" strokeWidth={1.5} />
           </div>
         )}
 
         <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/22 via-slate-950/6 to-transparent" />
       </div>
 
-      <div className="flex flex-1 flex-col p-4 sm:p-5">
+      <div className="flex min-w-0 flex-1 flex-col p-3 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
             {dateLabel}
           </span>
         </div>
 
-        <h3 className="mt-3 line-clamp-3 text-lg font-semibold leading-7 text-slate-950 sm:text-[21px] sm:leading-8">
+        <h3 className="mt-2 line-clamp-3 text-[15px] font-semibold leading-6 text-slate-950 sm:mt-3 sm:text-[21px] sm:leading-8">
           {article.title}
         </h3>
 
-        <p className="mt-3 line-clamp-3 flex-1 text-sm leading-6 text-slate-600 sm:line-clamp-4 sm:leading-7">
+        <p className="mt-2 line-clamp-2 flex-1 text-[13px] leading-5 text-slate-600 sm:mt-3 sm:line-clamp-4 sm:text-sm sm:leading-7">
           {article.description}
         </p>
 
-        <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 text-sm sm:mt-5">
+        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs sm:mt-5 sm:pt-4 sm:text-sm">
           <span className="font-medium text-slate-900">Čítať viac</span>
           <ExternalLink className="h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
         </div>

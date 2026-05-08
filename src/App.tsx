@@ -194,9 +194,9 @@ function FeedLeadStory({ article, onSelect }: FeedLeadStoryProps) {
     <button
       type="button"
       onClick={() => onSelect(article)}
-      className="group news-card-shadow news-pressable grid w-full overflow-hidden rounded-lg border border-slate-200/80 bg-white text-left lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.95fr)]"
+      className="group news-card-shadow news-pressable grid w-full overflow-hidden rounded-[18px] border border-slate-200/80 bg-white text-left sm:rounded-lg lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.95fr)]"
     >
-      <div className="relative min-h-[210px] overflow-hidden bg-slate-100 sm:min-h-[280px] lg:min-h-[440px]">
+      <div className="relative min-h-[180px] overflow-hidden bg-slate-100 sm:min-h-[280px] lg:min-h-[440px]">
         {showImage ? (
           <img
             src={article.urlToImage}
@@ -211,33 +211,33 @@ function FeedLeadStory({ article, onSelect }: FeedLeadStoryProps) {
           </div>
         )}
 
-        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-4 py-4 sm:px-5 sm:py-5">
-          <span className="rounded-full bg-slate-950/78 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-white backdrop-blur-sm">
+        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-3.5 py-3.5 sm:px-5 sm:py-5">
+          <span className="rounded-full bg-slate-950/78 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-white backdrop-blur-sm sm:px-3 sm:text-[11px] sm:tracking-[0.18em]">
             Top story
           </span>
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/20 via-slate-950/4 to-transparent" />
       </div>
 
-      <div className="flex flex-col justify-between p-5 sm:p-8">
+      <div className="flex flex-col justify-between p-4 sm:p-8">
         <div>
-          <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-            <span className="inline-flex items-center rounded-full border border-slate-200/80 bg-slate-50 px-3 py-1.5">
+          <div className="mb-3 flex flex-wrap items-center gap-3 text-[11px] text-slate-500 sm:mb-4 sm:text-xs">
+            <span className="inline-flex items-center rounded-full border border-slate-200/80 bg-slate-50 px-2.5 py-1 sm:px-3 sm:py-1.5">
               {formatLongDate(article.publishedAt)}
             </span>
           </div>
 
-          <h3 className="max-w-3xl font-display text-2xl leading-tight text-slate-950 sm:text-[42px]">
+          <h3 className="max-w-3xl font-display text-xl leading-tight text-slate-950 sm:text-[42px]">
             {article.title}
           </h3>
-          <p className="mt-4 max-w-2xl text-[15px] leading-7 text-slate-600 sm:mt-5 sm:text-base">
+          <p className="mt-3 line-clamp-3 max-w-2xl text-sm leading-6 text-slate-600 sm:mt-5 sm:line-clamp-none sm:text-base sm:leading-7">
             {article.description}
           </p>
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-5 sm:mt-8">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4 sm:mt-8 sm:pt-5">
           <span className="text-sm font-medium text-slate-900">Otvoriť článok</span>
-          <span className="text-xs uppercase tracking-[0.18em] text-slate-400">
+          <span className="text-[11px] uppercase tracking-[0.16em] text-slate-400 sm:text-xs sm:tracking-[0.18em]">
             Hlavný výber
           </span>
         </div>
@@ -263,7 +263,7 @@ function BriefingItem({ article, onSelect }: BriefingItemProps) {
     <button
       type="button"
       onClick={() => onSelect(article)}
-      className="group news-pressable news-soft-shadow grid w-full grid-cols-[88px_minmax(0,1fr)] gap-3 rounded-lg border border-slate-200/70 bg-slate-50/65 p-2 text-left hover:border-slate-300 hover:bg-white sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-4"
+      className="group news-pressable news-soft-shadow grid w-full grid-cols-[76px_minmax(0,1fr)] gap-2.5 rounded-lg border border-slate-200/70 bg-slate-50/65 p-1.5 text-left hover:border-slate-300 hover:bg-white sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-4 sm:p-2"
     >
       <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-slate-100">
         {showImage ? (
@@ -284,7 +284,7 @@ function BriefingItem({ article, onSelect }: BriefingItemProps) {
         <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
           <span>{formatShortDate(article.publishedAt)}</span>
         </div>
-        <h4 className="mt-2 line-clamp-3 text-sm font-semibold leading-6 text-slate-950 sm:text-[15px]">
+        <h4 className="mt-1.5 line-clamp-3 text-[13px] font-semibold leading-5 text-slate-950 sm:mt-2 sm:text-[15px] sm:leading-6">
           {article.title}
         </h4>
       </div>
@@ -311,17 +311,17 @@ function LocationSetupCard({
   onOpenSettings,
 }: LocationSetupCardProps) {
   return (
-    <section className="news-card-shadow overflow-hidden rounded-[24px] border border-sky-200/80 bg-[linear-gradient(135deg,rgba(240,249,255,0.96)_0%,rgba(236,253,245,0.88)_100%)] p-5 sm:p-6">
+    <section className="news-card-shadow overflow-hidden rounded-[20px] border border-sky-200/80 bg-[linear-gradient(135deg,rgba(240,249,255,0.96)_0%,rgba(236,253,245,0.88)_100%)] p-4 sm:rounded-[24px] sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="max-w-2xl">
           <span className="inline-flex items-center gap-2 rounded-full border border-sky-200/80 bg-white/80 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-sky-700">
             <Navigation className="h-3.5 w-3.5" />
             Presná poloha
           </span>
-          <h3 className="mt-4 text-xl font-semibold leading-tight text-slate-950 sm:text-2xl">
+          <h3 className="mt-3 text-lg font-semibold leading-tight text-slate-950 sm:mt-4 sm:text-2xl">
             Počasie a lokálne správy podľa miesta
           </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-[15px]">
+          <p className="mt-2 text-[13px] leading-5 text-slate-600 sm:text-[15px] sm:leading-6">
             Jedným klikom nastavíme polohu, počasie aj lokálny feed bez ručného
             vyberania regiónu.
           </p>
@@ -332,7 +332,7 @@ function LocationSetupCard({
             type="button"
             onClick={onEnable}
             disabled={isLoading}
-            className="news-pressable inline-flex h-11 items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-medium text-white shadow-[0_12px_24px_-20px_rgba(15,23,42,0.9)] hover:bg-slate-800 disabled:cursor-wait disabled:scale-100 disabled:bg-slate-400"
+            className="news-pressable inline-flex h-10 items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-medium text-white shadow-[0_12px_24px_-20px_rgba(15,23,42,0.9)] hover:bg-slate-800 disabled:cursor-wait disabled:scale-100 disabled:bg-slate-400 sm:h-11"
           >
             {isLoading ? 'Načítavam polohu' : 'Použiť moju polohu'}
           </button>
@@ -784,7 +784,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-7 px-3 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:gap-10 sm:px-6 sm:py-8 sm:pb-8 lg:px-8">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-3 py-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:gap-10 sm:px-6 sm:py-8 sm:pb-8 lg:px-8">
         {error ? (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
@@ -817,17 +817,17 @@ export default function App() {
           </div>
         ) : filteredArticles.length > 0 ? (
           <>
-            <section className="grid gap-8 xl:grid-cols-[minmax(0,1.52fr)_360px]">
-              <div className="space-y-6">
-                <div className="flex flex-col gap-5 border-b border-slate-200/80 pb-6 lg:flex-row lg:items-end lg:justify-between">
+            <section className="grid gap-6 xl:grid-cols-[minmax(0,1.52fr)_360px] xl:gap-8">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="flex flex-col gap-4 border-b border-slate-200/80 pb-4 sm:gap-5 sm:pb-6 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
                     <p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-700">
                       {feedMeta.kicker}
                     </p>
-                    <h2 className="mt-3 max-w-4xl font-display text-3xl leading-tight text-slate-950 sm:text-5xl">
+                    <h2 className="mt-2 max-w-4xl font-display text-[28px] leading-tight text-slate-950 sm:mt-3 sm:text-5xl">
                       {feedMeta.title}
                     </h2>
-                    <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-[15px]">
+                    <p className="mt-3 text-sm leading-6 text-slate-600 sm:mt-4 sm:text-[15px] sm:leading-7">
                       {feedMeta.description}
                     </p>
                   </div>
@@ -870,13 +870,13 @@ export default function App() {
                 ) : null}
               </div>
 
-              <aside className="space-y-5">
+              <aside className="space-y-4 sm:space-y-5">
                 <WeatherWidget
                   isLoading={isWeatherLoading}
                   weather={weather}
                 />
 
-                <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-5">
+                <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-4 sm:p-5">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
@@ -889,7 +889,7 @@ export default function App() {
                     <Zap className="h-4 w-4 text-sky-700" />
                   </div>
 
-                  <div className="mt-5 space-y-4">
+                  <div className="mt-4 space-y-3 sm:mt-5 sm:space-y-4">
                     {briefingArticles.length > 0 ? (
                       briefingArticles.map((article) => (
                         <div key={article.url}>
@@ -904,7 +904,7 @@ export default function App() {
                   </div>
                 </section>
 
-                <section className="news-soft-shadow rounded-lg border border-slate-200/80 bg-white/85 p-5">
+                <section className="news-soft-shadow rounded-lg border border-slate-200/80 bg-white/85 p-4 sm:p-5">
                   <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
                     Feed controls
                   </p>
@@ -952,7 +952,7 @@ export default function App() {
                       </div>
                     ) : null}
 
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                    <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-1">
                       <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-4 py-3">
                         <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">
                           Zobrazené
@@ -985,7 +985,7 @@ export default function App() {
                   <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
                     Pokračovanie feedu
                   </p>
-                  <h3 className="mt-2 text-2xl font-semibold text-slate-950">
+                  <h3 className="mt-2 text-xl font-semibold text-slate-950 sm:text-2xl">
                     Ďalšie správy
                   </h3>
                 </div>
@@ -996,7 +996,7 @@ export default function App() {
               </div>
 
               {gridArticles.length > 0 ? (
-                <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-3.5 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
                   {gridArticles.map((article, index) => (
                     <div key={article.url}>
                       <NewsCard article={article} index={index} onSelect={setSelectedArticle} />
