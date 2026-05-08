@@ -8,6 +8,12 @@ import type {
   NewsFeedResponse,
   RegionCode,
 } from "../src/types";
+import {
+  enforceRequestPolicy,
+  getDefaultSecurityHeaders,
+  isBlockedRequestDecision,
+  withArticleContentTokens,
+} from "../server/request-security";
 
 type FeedCandidate = {
   label: string;
@@ -224,6 +230,10 @@ function normalizeLocalEdition(value: string | null): LocalEdition {
 
 function normalizeRegion(value: string | null): RegionCode {
   return REGIONS.has(value as RegionCode) ? (value as RegionCode) : "SK";
+}
+
+function clampText(value: string | null, maxLength: number) {
+  return (value ?? "").trim().slice(0, maxLength);
 }
 
 function isSlovakEdition(language: LanguageCode, region: RegionCode) {
@@ -1076,12 +1086,18 @@ export default async function handler(request: any, response?: any) {
   try {
     const searchParams = readSearchParams(request);
     const category = normalizeCategory(searchParams.get("category"));
-    const query = (searchParams.get("q") ?? "").trim();
+    const rawQuery = (searchParams.get("q") ?? "").trim();
+    const decision = enforceRequestPolicy(request, "news", { query: rawQuery });
+    if (isBlockedRequestDecision(decision)) {
+      return sendJson(response, decision.payload, decision.status, decision.headers);
+    }
+
+    const query = rawQuery.slice(0, 120);
     const language = normalizeLanguage(searchParams.get("lang"));
     const region = normalizeRegion(searchParams.get("region"));
     const localEdition = normalizeLocalEdition(searchParams.get("localEdition"));
-    const locationLabel = (searchParams.get("locationLabel") ?? "").trim();
-    const locationQuery = (searchParams.get("locationQuery") ?? "").trim();
+    const locationLabel = clampText(searchParams.get("locationLabel"), 100);
+    const locationQuery = clampText(searchParams.get("locationQuery"), 140);
     const refresh = searchParams.get("refresh") === "true";
     const localEditionSummary = buildLocalEditionSummary(language, region, localEdition, locationLabel);
     const locationSearchQuery = `${locationLabel || locationQuery} spravy`.trim();
@@ -1108,12 +1124,13 @@ export default async function handler(request: any, response?: any) {
     );
 
     const feed = {
-      articles: result.articles,
+      articles: withArticleContentTokens(result.articles),
       editorial: buildEditorial(result.articles, category, query, localEditionSummary),
       localEdition: localEditionSummary,
     } satisfies NewsFeedResponse;
 
     return sendJson(response, feed, 200, {
+      ...decision.headers,
       "Cache-Control": refresh || category === "general"
         ? "no-store"
         : "public, max-age=60, s-maxage=180, stale-while-revalidate=600",
@@ -1131,6 +1148,7 @@ export default async function handler(request: any, response?: any) {
     } satisfies NewsFeedResponse;
 
     return sendJson(response, emptyFeed, 200, {
+      ...getDefaultSecurityHeaders(),
       "Cache-Control": "no-store",
       "X-Baky-Cache-State": "error-empty",
       "X-Baky-Feed-Updated-At": new Date().toISOString(),

@@ -1,3 +1,9 @@
+import {
+  enforceRequestPolicy,
+  isBlockedRequestDecision,
+  validateArticleContentToken,
+} from "../server/request-security";
+
 function buildJsonResponse(payload: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(payload), {
     ...init,
@@ -34,6 +40,17 @@ function readArticleUrl(request: any) {
   }
 
   return new URL(request.url).searchParams.get("url") ?? "";
+}
+
+function readArticleToken(request: any) {
+  if (request?.query) {
+    const value = request.query.token;
+    if (typeof value === "string") return value;
+    if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+    return "";
+  }
+
+  return new URL(request.url).searchParams.get("token") ?? "";
 }
 
 function isUrlSafe(value: string) {
@@ -112,12 +129,29 @@ async function fetchArticleContent(articleUrl: string) {
 
 export default async function handler(request: any, response?: any) {
   const articleUrl = readArticleUrl(request);
-  if (!articleUrl || !isUrlSafe(articleUrl)) {
-    return sendJson(response, { content: "" }, 200, { "Cache-Control": "no-store" });
+  const decision = enforceRequestPolicy(request, "article", { articleUrl });
+  if (isBlockedRequestDecision(decision)) {
+    return sendJson(response, decision.payload, decision.status, decision.headers);
+  }
+
+  const token = readArticleToken(request);
+  if (!articleUrl || articleUrl.length > 1500 || !isUrlSafe(articleUrl)) {
+    return sendJson(response, { content: "" }, 200, {
+      ...decision.headers,
+      "Cache-Control": "no-store",
+    });
+  }
+
+  if (!validateArticleContentToken(articleUrl, token)) {
+    return sendJson(response, { error: "Pristup k obsahu clanku bol zamietnuty." }, 403, {
+      ...decision.headers,
+      "Cache-Control": "no-store",
+    });
   }
 
   const content = await fetchArticleContent(articleUrl);
   return sendJson(response, { content }, 200, {
+    ...decision.headers,
     "Cache-Control": content
       ? "public, max-age=300, s-maxage=1800, stale-while-revalidate=86400"
       : "no-store",

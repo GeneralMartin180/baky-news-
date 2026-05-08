@@ -1,3 +1,5 @@
+import { enforceRequestPolicy, isBlockedRequestDecision } from "../server/request-security";
+
 function buildJsonResponse(payload: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(payload), {
     ...init,
@@ -26,6 +28,11 @@ function sendJson(response: any, payload: unknown, status = 200, headers: Record
 }
 
 export default async function handler(_request: any, response?: any) {
+  const decision = enforceRequestPolicy(_request, "health");
+  if (isBlockedRequestDecision(decision)) {
+    return sendJson(response, decision.payload, decision.status, decision.headers);
+  }
+
   return sendJson(
     response,
     {
@@ -35,6 +42,7 @@ export default async function handler(_request: any, response?: any) {
     },
     200,
     {
+      ...decision.headers,
       "Cache-Control": "no-store",
     }
   );

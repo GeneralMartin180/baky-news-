@@ -10,6 +10,7 @@ import {
   handleWeatherRequest,
 } from "./server/api-handlers";
 import { startFeedPipeline } from "./server/news-service";
+import { getDefaultSecurityHeaders } from "./server/request-security";
 
 function createApiLimiter(max: number) {
   return rateLimit({
@@ -32,10 +33,18 @@ function createApiLimiter(max: number) {
 async function startServer() {
   const app = express();
   const port = Number(process.env.PORT) || 3000;
-  const newsLimiter = createApiLimiter(240);
-  const weatherLimiter = createApiLimiter(180);
-  const articleLimiter = createApiLimiter(45);
-  const healthLimiter = createApiLimiter(120);
+  const newsLimiter = createApiLimiter(120);
+  const weatherLimiter = createApiLimiter(120);
+  const articleLimiter = createApiLimiter(24);
+  const healthLimiter = createApiLimiter(60);
+
+  app.set("trust proxy", 1);
+  app.use("/api", (_request, response, next) => {
+    for (const [name, value] of Object.entries(getDefaultSecurityHeaders())) {
+      response.setHeader(name, value);
+    }
+    next();
+  });
 
   startFeedPipeline();
 

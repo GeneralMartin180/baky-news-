@@ -1,4 +1,5 @@
 import type { LanguageCode, LocalEdition, RegionCode, WeatherSnapshot } from "../src/types";
+import { enforceRequestPolicy, isBlockedRequestDecision } from "../server/request-security";
 
 type WeatherLocation = {
   label: string;
@@ -95,6 +96,14 @@ function normalizeCoordinate(value: string | null) {
   return Number.isFinite(coordinate) ? coordinate : null;
 }
 
+function isValidLatitude(value: number | null) {
+  return value === null || (value >= -90 && value <= 90);
+}
+
+function isValidLongitude(value: number | null) {
+  return value === null || (value >= -180 && value <= 180);
+}
+
 function resolveLocation(region: RegionCode, localEdition: LocalEdition) {
   if (localEdition !== "all" && LOCAL_EDITION_LOCATIONS[localEdition]) {
     return LOCAL_EDITION_LOCATIONS[localEdition];
@@ -167,13 +176,26 @@ async function fetchWeatherSnapshot(location: WeatherLocation): Promise<WeatherS
 }
 
 export default async function handler(request: any, response?: any) {
+  const decision = enforceRequestPolicy(request, "weather");
+  if (isBlockedRequestDecision(decision)) {
+    return sendJson(response, decision.payload, decision.status, decision.headers);
+  }
+
   const searchParams = readSearchParams(request);
   normalizeLanguage(searchParams.get("lang"));
   const region = normalizeRegion(searchParams.get("region"));
   const localEdition = normalizeLocalEdition(searchParams.get("localEdition"));
   const latitude = normalizeCoordinate(searchParams.get("latitude"));
   const longitude = normalizeCoordinate(searchParams.get("longitude"));
-  const locationLabel = (searchParams.get("locationLabel") ?? "").trim();
+  const locationLabel = (searchParams.get("locationLabel") ?? "").trim().slice(0, 100);
+
+  if (!isValidLatitude(latitude) || !isValidLongitude(longitude)) {
+    return sendJson(response, { error: "Neplatne suradnice." }, 400, {
+      ...decision.headers,
+      "Cache-Control": "no-store",
+    });
+  }
+
   const hasPreciseLocation = latitude !== null && longitude !== null;
   const location = hasPreciseLocation
     ? {
@@ -186,6 +208,7 @@ export default async function handler(request: any, response?: any) {
   try {
     const snapshot = await fetchWeatherSnapshot(location);
     return sendJson(response, snapshot, 200, {
+      ...decision.headers,
       "Cache-Control": hasPreciseLocation
         ? "no-store"
         : "public, max-age=300, s-maxage=600, stale-while-revalidate=1800",
@@ -193,6 +216,7 @@ export default async function handler(request: any, response?: any) {
   } catch (error) {
     console.error("Vercel weather handler failed:", error);
     return sendJson(response, fallbackSnapshot(location), 200, {
+      ...decision.headers,
       "Cache-Control": "no-store",
       "X-Baky-Weather-State": "fallback",
     });

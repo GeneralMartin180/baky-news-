@@ -25,15 +25,21 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
     }
 
     setImageFailed(false);
-    void fetchFullContent(article.url);
+    void fetchFullContent(article.url, article.contentToken);
   }, [article]);
 
-  const fetchFullContent = async (url: string) => {
+  const fetchFullContent = async (url: string, contentToken?: string) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`/api/article-content?url=${encodeURIComponent(url)}`);
+      const requestUrl = new URL('/api/article-content', window.location.origin);
+      requestUrl.searchParams.set('url', url);
+      if (contentToken) {
+        requestUrl.searchParams.set('token', contentToken);
+      }
+
+      const response = await fetch(requestUrl.toString());
       if (!response.ok) {
         throw new Error('Nepodarilo sa načítať obsah');
       }
