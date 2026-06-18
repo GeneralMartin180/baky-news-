@@ -1,7 +1,7 @@
 {
   "name": "Baky News",
   "short_name": "Baky News",
-  "description": "Slovenske a svetove spravy, pocasie a lokalny feed na jednom mieste.",
+  "description": "Slovenské a svetové správy, počasie a lokálny prehľad na jednom mieste.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
