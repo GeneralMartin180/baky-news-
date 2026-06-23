@@ -1493,10 +1493,12 @@ export default function App() {
                     Feed controls
                   </p>
 
-                  <div className="mt-3 space-y-3 sm:mt-4 sm:space-y-4">
-                    <div className="flex items-center justify-between gap-3 sm:items-start sm:gap-4">
+                  <div className="mt-2.5 space-y-2.5 sm:mt-4 sm:space-y-4">
+                    <div className="flex items-center justify-between gap-2.5 rounded-md border border-slate-200/70 bg-slate-50/70 px-2.5 py-2 sm:items-start sm:gap-4 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
                       <div>
-                        <h3 className="text-xs font-semibold text-slate-950 sm:text-sm">Signal Mode</h3>
+                        <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-950 sm:text-sm sm:normal-case sm:tracking-normal">
+                          Signal<span className="hidden sm:inline"> Mode</span>
+                        </h3>
                         <p className="mt-1 hidden text-sm leading-6 text-slate-500 sm:block">
                           Filtrovanie titulkov s bulvárnym tónom a slabších zdrojov.
                         </p>
@@ -1506,7 +1508,7 @@ export default function App() {
                         type="button"
                         onClick={() => setSignalMode((value) => !value)}
                         className={cn(
-                          'news-pressable inline-flex h-6 w-10 shrink-0 items-center rounded-full border transition-colors sm:h-7 sm:w-12',
+                          'news-pressable inline-flex h-5 w-8 shrink-0 items-center rounded-full border transition-colors sm:h-7 sm:w-12',
                           signalMode
                             ? 'border-slate-900 bg-slate-900'
                             : 'border-slate-300 bg-slate-200'
@@ -1515,8 +1517,8 @@ export default function App() {
                       >
                         <span
                           className={cn(
-                            'mx-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform sm:h-5 sm:w-5',
-                            signalMode && 'translate-x-4 sm:translate-x-5'
+                            'mx-1 h-3 w-3 rounded-full bg-white shadow-sm transition-transform sm:h-5 sm:w-5',
+                            signalMode && 'translate-x-3 sm:translate-x-5'
                           )}
                         />
                       </button>
