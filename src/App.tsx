@@ -450,9 +450,9 @@ function FeedLeadStory({ article, onSelect }: FeedLeadStoryProps) {
     <button
       type="button"
       onClick={() => onSelect(article)}
-      className="group news-card-shadow news-pressable grid w-full overflow-hidden rounded-[18px] border border-slate-200/80 bg-white text-left sm:rounded-lg lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.95fr)]"
+      className="group news-card-shadow news-pressable grid w-full overflow-hidden rounded-[14px] border border-slate-200/80 bg-white text-left sm:rounded-lg lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.95fr)]"
     >
-      <div className="relative min-h-[180px] overflow-hidden bg-slate-100 sm:min-h-[280px] lg:min-h-[440px]">
+      <div className="relative min-h-[118px] overflow-hidden bg-slate-100 sm:min-h-[280px] lg:min-h-[440px]">
         {showImage ? (
           <img
             src={article.urlToImage}
@@ -467,33 +467,33 @@ function FeedLeadStory({ article, onSelect }: FeedLeadStoryProps) {
           </div>
         )}
 
-        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-3.5 py-3.5 sm:px-5 sm:py-5">
-          <span className="rounded-full bg-slate-950/78 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-white backdrop-blur-sm sm:px-3 sm:text-[11px] sm:tracking-[0.18em]">
+        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-2.5 py-2.5 sm:px-5 sm:py-5">
+          <span className="rounded-full bg-slate-950/78 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.14em] text-white backdrop-blur-sm sm:px-3 sm:py-1 sm:text-[11px] sm:tracking-[0.18em]">
             Top story
           </span>
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/20 via-slate-950/4 to-transparent" />
       </div>
 
-      <div className="flex flex-col justify-between p-4 sm:p-8">
+      <div className="flex flex-col justify-between p-3 sm:p-8">
         <div>
-          <div className="mb-3 flex flex-wrap items-center gap-3 text-[11px] text-slate-500 sm:mb-4 sm:text-xs">
-            <span className="inline-flex items-center rounded-full border border-slate-200/80 bg-slate-50 px-2.5 py-1 sm:px-3 sm:py-1.5">
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] text-slate-500 sm:mb-4 sm:gap-3 sm:text-xs">
+            <span className="inline-flex items-center rounded-full border border-slate-200/80 bg-slate-50 px-2 py-0.5 sm:px-3 sm:py-1.5">
               {formatLongDate(article.publishedAt)}
             </span>
           </div>
 
-          <h3 className="max-w-3xl font-display text-xl leading-tight text-slate-950 sm:text-[42px]">
+          <h3 className="max-w-3xl font-display text-[18px] leading-tight text-slate-950 sm:text-[42px]">
             {article.title}
           </h3>
-          <p className="mt-3 line-clamp-3 max-w-2xl text-sm leading-6 text-slate-600 sm:mt-5 sm:line-clamp-none sm:text-base sm:leading-7">
+          <p className="mt-2 line-clamp-2 max-w-2xl text-[13px] leading-5 text-slate-600 sm:mt-5 sm:line-clamp-none sm:text-base sm:leading-7">
             {article.description}
           </p>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4 sm:mt-8 sm:pt-5">
-          <span className="text-sm font-medium text-slate-900">Otvoriť článok</span>
-          <span className="text-[11px] uppercase tracking-[0.16em] text-slate-400 sm:text-xs sm:tracking-[0.18em]">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 sm:mt-8 sm:pt-5">
+          <span className="text-xs font-medium text-slate-900 sm:text-sm">Otvoriť článok</span>
+          <span className="text-[10px] uppercase tracking-[0.14em] text-slate-400 sm:text-xs sm:tracking-[0.18em]">
             Hlavný výber
           </span>
         </div>
@@ -519,7 +519,7 @@ function BriefingItem({ article, onSelect }: BriefingItemProps) {
     <button
       type="button"
       onClick={() => onSelect(article)}
-      className="group news-pressable news-soft-shadow grid w-full grid-cols-[76px_minmax(0,1fr)] gap-2.5 rounded-lg border border-slate-200/70 bg-slate-50/65 p-1.5 text-left hover:border-slate-300 hover:bg-white sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-4 sm:p-2"
+      className="group news-pressable news-soft-shadow grid w-full grid-cols-[64px_minmax(0,1fr)] gap-2 rounded-lg border border-slate-200/70 bg-slate-50/65 p-1 text-left hover:border-slate-300 hover:bg-white sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-4 sm:p-2"
     >
       <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-slate-100">
         {showImage ? (
@@ -536,11 +536,11 @@ function BriefingItem({ article, onSelect }: BriefingItemProps) {
           </div>
         )}
       </div>
-      <div className="min-w-0 py-1">
-        <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+      <div className="min-w-0 py-0.5 sm:py-1">
+        <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500 sm:gap-2 sm:text-[11px] sm:tracking-[0.14em]">
           <span>{formatShortDate(article.publishedAt)}</span>
         </div>
-        <h4 className="mt-1.5 line-clamp-3 text-[13px] font-semibold leading-5 text-slate-950 sm:mt-2 sm:text-[15px] sm:leading-6">
+        <h4 className="mt-1 line-clamp-2 text-xs font-semibold leading-4 text-slate-950 sm:mt-2 sm:line-clamp-3 sm:text-[15px] sm:leading-6">
           {article.title}
         </h4>
       </div>
@@ -613,36 +613,36 @@ function LocationSetupCard({
 
 function EditorialPanel({ briefing, localEdition }: EditorialPanelProps) {
   return (
-    <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-4 sm:p-5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+    <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-3 sm:p-5">
+      <div className="flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-3xl">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-700">
+          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-sky-700 sm:text-xs sm:tracking-[0.18em]">
             {briefing.kicker}
           </p>
-          <h3 className="mt-2 text-xl font-semibold text-slate-950 sm:text-2xl">
+          <h3 className="mt-1 text-base font-semibold leading-tight text-slate-950 sm:mt-2 sm:text-2xl">
             {briefing.headline}
           </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
+          <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-slate-600 sm:mt-2 sm:line-clamp-none sm:text-sm sm:leading-6">
             {briefing.summary}
           </p>
         </div>
 
         {localEdition ? (
-          <div className="news-soft-shadow min-w-0 rounded-lg border border-sky-100 bg-sky-50/70 px-3.5 py-3 lg:min-w-[220px]">
-            <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-sky-700">
+          <div className="news-soft-shadow min-w-0 rounded-md border border-sky-100 bg-sky-50/70 px-3 py-2 sm:rounded-lg sm:px-3.5 sm:py-3 lg:min-w-[220px]">
+            <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-sky-700 sm:text-[11px] sm:tracking-[0.16em]">
               {localEdition.badge}
             </div>
-            <div className="mt-1 text-base font-semibold text-slate-950">
+            <div className="mt-0.5 text-sm font-semibold text-slate-950 sm:mt-1 sm:text-base">
               {localEdition.label}
             </div>
-            <p className="mt-1.5 text-sm leading-5 text-slate-600">
+            <p className="mt-1 line-clamp-1 text-xs leading-4 text-slate-600 sm:mt-1.5 sm:line-clamp-none sm:text-sm sm:leading-5">
               {localEdition.description}
             </p>
           </div>
         ) : null}
       </div>
 
-      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.9fr)]">
+      <div className="mt-4 hidden gap-3 sm:grid lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.9fr)]">
         <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-4 py-3.5">
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
             Prečo to riešiť
@@ -804,38 +804,42 @@ function HabitPanel({
         : 'Večerný súhrn';
 
   return (
-    <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-4 sm:p-5">
+    <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-3 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500 sm:text-xs sm:tracking-[0.16em]">
             Baky loop
           </p>
-          <h3 className="mt-2 text-lg font-semibold text-slate-950">{title}</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <h3 className="mt-1 text-base font-semibold text-slate-950 sm:mt-2 sm:text-lg">
+            {title}
+          </h3>
+          <p className="mt-2 hidden text-sm leading-6 text-slate-500 sm:block">
             Otvor pár správ a feed sa začne skladať podľa tvojho rytmu.
           </p>
         </div>
         <Sparkles className="h-4 w-4 text-sky-700" />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2.5">
-        <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-3 py-3">
-          <div className="text-[11px] uppercase tracking-[0.14em] text-slate-500">
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-2.5">
+        <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-2.5 py-2 sm:px-3 sm:py-3">
+          <div className="text-[10px] uppercase tracking-[0.12em] text-slate-500 sm:text-[11px] sm:tracking-[0.14em]">
             Dnes otvorené
           </div>
-          <div className="mt-1 text-xl font-semibold text-slate-950">
+          <div className="mt-0.5 text-lg font-semibold text-slate-950 sm:mt-1 sm:text-xl">
             {openedToday}
           </div>
         </div>
-        <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-3 py-3">
-          <div className="text-[11px] uppercase tracking-[0.14em] text-slate-500">
+        <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-2.5 py-2 sm:px-3 sm:py-3">
+          <div className="text-[10px] uppercase tracking-[0.12em] text-slate-500 sm:text-[11px] sm:tracking-[0.14em]">
             Uložené
           </div>
-          <div className="mt-1 text-xl font-semibold text-slate-950">{savedCount}</div>
+          <div className="mt-0.5 text-lg font-semibold text-slate-950 sm:mt-1 sm:text-xl">
+            {savedCount}
+          </div>
         </div>
       </div>
 
-      <div className="mt-4 space-y-2 text-sm leading-6 text-slate-600">
+      <div className="mt-3 space-y-1.5 text-xs leading-5 text-slate-600 sm:mt-4 sm:space-y-2 sm:text-sm sm:leading-6">
         <div className="flex items-center gap-2">
           <Target className="h-4 w-4 text-slate-400" />
           <span className="line-clamp-1">Téma: {topTopic}</span>
@@ -846,12 +850,12 @@ function HabitPanel({
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4">
         <button
           type="button"
           onClick={() => onViewChange('for-you')}
           className={cn(
-            'news-pressable inline-flex h-10 items-center justify-center rounded-full border px-3 text-sm font-medium',
+            'news-pressable inline-flex h-9 items-center justify-center rounded-full border px-3 text-sm font-medium sm:h-10',
             activeView === 'for-you'
               ? 'border-slate-950 bg-slate-950 text-white'
               : 'border-slate-200/80 bg-white text-slate-700 hover:border-slate-300'
@@ -863,7 +867,7 @@ function HabitPanel({
           type="button"
           onClick={() => onViewChange('saved')}
           className={cn(
-            'news-pressable inline-flex h-10 items-center justify-center rounded-full border px-3 text-sm font-medium',
+            'news-pressable inline-flex h-9 items-center justify-center rounded-full border px-3 text-sm font-medium sm:h-10',
             activeView === 'saved'
               ? 'border-slate-950 bg-slate-950 text-white'
               : 'border-slate-200/80 bg-white text-slate-700 hover:border-slate-300'
@@ -1382,42 +1386,42 @@ export default function App() {
           </div>
         ) : filteredArticles.length > 0 || feedView === 'saved' ? (
           <>
-            <section className="grid gap-6 xl:grid-cols-[minmax(0,1.52fr)_360px] xl:gap-8">
-              <div className="space-y-4 sm:space-y-6">
-                <div className="flex flex-col gap-4 border-b border-slate-200/80 pb-4 sm:gap-5 sm:pb-6 lg:flex-row lg:items-end lg:justify-between">
+            <section className="grid gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1.52fr)_360px] xl:gap-8">
+              <div className="space-y-3 sm:space-y-6">
+                <div className="flex flex-col gap-2.5 border-b border-slate-200/80 pb-3 sm:gap-5 sm:pb-6 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-700">
+                    <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-sky-700 sm:text-xs sm:tracking-[0.18em]">
                       {feedMeta.kicker}
                     </p>
-                    <h2 className="mt-2 max-w-4xl font-display text-[28px] leading-tight text-slate-950 sm:mt-3 sm:text-5xl">
+                    <h2 className="mt-1 max-w-4xl font-display text-[23px] leading-tight text-slate-950 sm:mt-3 sm:text-5xl">
                       {feedMeta.title}
                     </h2>
-                    <p className="mt-3 text-sm leading-6 text-slate-600 sm:mt-4 sm:text-[15px] sm:leading-7">
+                    <p className="mt-1.5 line-clamp-2 text-[13px] leading-5 text-slate-600 sm:mt-4 sm:line-clamp-none sm:text-[15px] sm:leading-7">
                       {feedMeta.description}
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className="news-soft-shadow inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1.5 text-slate-600">
-                      <Clock3 className="h-3.5 w-3.5" />
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] sm:gap-2 sm:text-xs">
+                    <span className="news-soft-shadow inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-2.5 py-1 text-slate-600 sm:gap-2 sm:px-3 sm:py-1.5">
+                      <Clock3 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       Aktualizované{' '}
                       {lastUpdated.toLocaleTimeString('sk-SK', {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
                     </span>
-                    <span className="news-soft-shadow inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1.5 text-slate-600">
-                      <Settings2 className="h-3.5 w-3.5" />
+                    <span className="news-soft-shadow inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-2.5 py-1 text-slate-600 sm:gap-2 sm:px-3 sm:py-1.5">
+                      <Settings2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       {settingsLabel}
                     </span>
                     {localEditionSummary ? (
-                      <span className="news-soft-shadow inline-flex items-center gap-2 rounded-full border border-sky-100 bg-sky-50 px-3 py-1.5 text-sky-700">
-                        <MapPinned className="h-3.5 w-3.5" />
+                      <span className="news-soft-shadow inline-flex items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50 px-2.5 py-1 text-sky-700 sm:gap-2 sm:px-3 sm:py-1.5">
+                        <MapPinned className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         {localEditionSummary.label}
                       </span>
                     ) : null}
-                    <span className="news-soft-shadow inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1.5 text-slate-600">
-                      <LayoutGrid className="h-3.5 w-3.5" />
+                    <span className="news-soft-shadow inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-2.5 py-1 text-slate-600 sm:gap-2 sm:px-3 sm:py-1.5">
+                      <LayoutGrid className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       {activeArticles.length} článkov
                     </span>
                   </div>
@@ -1441,7 +1445,7 @@ export default function App() {
                 ) : null}
               </div>
 
-              <aside className="space-y-4 sm:space-y-5">
+              <aside className="space-y-3 sm:space-y-5">
                 <WeatherWidget
                   isLoading={isWeatherLoading}
                   weather={weather}
@@ -1456,20 +1460,20 @@ export default function App() {
                   topTopic={topTopicLabel}
                 />
 
-                <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-4 sm:p-5">
+                <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-3 sm:p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                      <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500 sm:text-xs sm:tracking-[0.16em]">
                         Rýchly briefing
                       </p>
-                      <h3 className="mt-2 text-lg font-semibold text-slate-950">
+                      <h3 className="mt-1 text-base font-semibold text-slate-950 sm:mt-2 sm:text-lg">
                         Top stories
                       </h3>
                     </div>
                     <Zap className="h-4 w-4 text-sky-700" />
                   </div>
 
-                  <div className="mt-4 space-y-3 sm:mt-5 sm:space-y-4">
+                  <div className="mt-3 space-y-2 sm:mt-5 sm:space-y-4">
                     {briefingArticles.length > 0 ? (
                       briefingArticles.map((article) => (
                         <div key={article.url}>
@@ -1484,16 +1488,16 @@ export default function App() {
                   </div>
                 </section>
 
-                <section className="news-soft-shadow rounded-lg border border-slate-200/80 bg-white/85 p-4 sm:p-5">
-                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                <section className="news-soft-shadow rounded-lg border border-slate-200/80 bg-white/85 p-3 sm:p-5">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500 sm:text-xs sm:tracking-[0.16em]">
                     Feed controls
                   </p>
 
-                  <div className="mt-4 space-y-4">
-                    <div className="flex items-start justify-between gap-4">
+                  <div className="mt-3 space-y-3 sm:mt-4 sm:space-y-4">
+                    <div className="flex items-start justify-between gap-3 sm:gap-4">
                       <div>
                         <h3 className="text-sm font-semibold text-slate-950">Signal Mode</h3>
-                        <p className="mt-1 text-sm leading-6 text-slate-500">
+                        <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
                           Filtrovanie titulkov s bulvárnym tónom a slabších zdrojov.
                         </p>
                       </div>
@@ -1532,20 +1536,20 @@ export default function App() {
                       </div>
                     ) : null}
 
-                    <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-1">
-                      <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-4 py-3">
-                        <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">
+                    <div className="grid gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-1">
+                      <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-3 py-2.5 sm:px-4 sm:py-3">
+                        <div className="text-[10px] uppercase tracking-[0.14em] text-slate-500 sm:text-[11px] sm:tracking-[0.16em]">
                           Zobrazené
                         </div>
-                        <div className="mt-1 text-lg font-semibold text-slate-950">
+                        <div className="mt-0.5 text-base font-semibold text-slate-950 sm:mt-1 sm:text-lg">
                           {visibleArticles.length}
                         </div>
                       </div>
-                      <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-4 py-3">
-                        <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">
+                      <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-3 py-2.5 sm:px-4 sm:py-3">
+                        <div className="text-[10px] uppercase tracking-[0.14em] text-slate-500 sm:text-[11px] sm:tracking-[0.16em]">
                           Auto refresh
                         </div>
-                        <div className="mt-1 text-lg font-semibold text-slate-950">
+                        <div className="mt-0.5 text-base font-semibold text-slate-950 sm:mt-1 sm:text-lg">
                           {feedSettings.autoRefreshMinutes} min
                         </div>
                       </div>
