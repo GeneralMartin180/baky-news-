@@ -1494,10 +1494,10 @@ export default function App() {
                   </p>
 
                   <div className="mt-3 space-y-3 sm:mt-4 sm:space-y-4">
-                    <div className="flex items-start justify-between gap-3 sm:gap-4">
+                    <div className="flex items-center justify-between gap-3 sm:items-start sm:gap-4">
                       <div>
-                        <h3 className="text-sm font-semibold text-slate-950">Signal Mode</h3>
-                        <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
+                        <h3 className="text-xs font-semibold text-slate-950 sm:text-sm">Signal Mode</h3>
+                        <p className="mt-1 hidden text-sm leading-6 text-slate-500 sm:block">
                           Filtrovanie titulkov s bulvárnym tónom a slabších zdrojov.
                         </p>
                       </div>
@@ -1506,7 +1506,7 @@ export default function App() {
                         type="button"
                         onClick={() => setSignalMode((value) => !value)}
                         className={cn(
-                          'news-pressable inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors',
+                          'news-pressable inline-flex h-6 w-10 shrink-0 items-center rounded-full border transition-colors sm:h-7 sm:w-12',
                           signalMode
                             ? 'border-slate-900 bg-slate-900'
                             : 'border-slate-300 bg-slate-200'
@@ -1515,8 +1515,8 @@ export default function App() {
                       >
                         <span
                           className={cn(
-                            'mx-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform',
-                            signalMode && 'translate-x-5'
+                            'mx-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform sm:h-5 sm:w-5',
+                            signalMode && 'translate-x-4 sm:translate-x-5'
                           )}
                         />
                       </button>
