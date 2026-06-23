@@ -9,11 +9,14 @@ import {
   Tv,
 } from 'lucide-react';
 
+import { ArticleInsightChips } from './ArticleInsightChips';
+import { DeskArticleInsight } from '../lib/news-intelligence';
 import { NewsArticle } from '../types';
 
 interface NewsCardProps {
   article: NewsArticle;
   index: number;
+  insight?: DeskArticleInsight;
   onSelect?: (article: NewsArticle) => void;
 }
 
@@ -24,7 +27,7 @@ function getPlaceholderIcon(title: string) {
   return placeholderIcons[iconIndex % placeholderIcons.length];
 }
 
-export function NewsCard({ article, index, onSelect }: NewsCardProps) {
+export function NewsCard({ article, index, insight, onSelect }: NewsCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
 
   const dateLabel = useMemo(
@@ -75,6 +78,12 @@ export function NewsCard({ article, index, onSelect }: NewsCardProps) {
             {dateLabel}
           </span>
         </div>
+
+        {insight ? (
+          <div className="mt-1.5">
+            <ArticleInsightChips compact insight={insight} />
+          </div>
+        ) : null}
 
         <h3 className="mt-1.5 line-clamp-2 text-[13px] font-semibold leading-5 text-slate-950 sm:mt-3 sm:line-clamp-3 sm:text-[21px] sm:leading-8">
           {article.title}

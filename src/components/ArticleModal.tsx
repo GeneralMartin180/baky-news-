@@ -13,7 +13,9 @@ import {
   X,
 } from 'lucide-react';
 
+import { ArticleInsightChips } from './ArticleInsightChips';
 import { LoadingIndicator } from './LoadingIndicator';
+import { DeskArticleInsight } from '../lib/news-intelligence';
 import { NewsArticle } from '../types';
 import { cn } from '../lib/utils';
 
@@ -31,6 +33,7 @@ const reactionOptions: Array<{
 
 interface ArticleModalProps {
   article: NewsArticle | null;
+  insight?: DeskArticleInsight | null;
   isSaved?: boolean;
   onClose: () => void;
   onReact?: (article: NewsArticle, reaction: ArticleReaction) => void;
@@ -42,6 +45,7 @@ interface ArticleModalProps {
 
 export function ArticleModal({
   article,
+  insight = null,
   isSaved = false,
   onClose,
   onReact,
@@ -193,6 +197,24 @@ export function ArticleModal({
               <p className="mt-5 border-l-2 border-slate-200 pl-4 text-base leading-7 text-slate-600 sm:mt-6 sm:pl-5 sm:text-lg sm:leading-8">
                 {article.description}
               </p>
+
+              {insight ? (
+                <div className="mt-5 space-y-3">
+                  <ArticleInsightChips insight={insight} />
+                  {insight.entities.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {insight.entities.map((entity) => (
+                        <span
+                          key={entity}
+                          className="inline-flex rounded-full border border-slate-200/80 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600"
+                        >
+                          {entity}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               {onReact ? (
                 <div className="mt-5 flex flex-wrap gap-2">

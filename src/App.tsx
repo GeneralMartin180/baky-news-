@@ -43,10 +43,31 @@ import {
   supportsGeolocation,
   withDetectedLocation,
 } from './lib/location';
+import {
+  articleMatchesTopic,
+  articleMatchesWatchlist,
+  buildArticleInsight,
+  buildExecutiveBrief,
+  buildRadarSnapshot,
+  DESK_WATCHLISTS,
+  DeskDigestMode,
+  DeskReadTimeFilter,
+  DeskSourceFilter,
+  matchesReadTimeFilter,
+  matchesSourceFilter,
+  prioritizeWatchlists,
+} from './lib/news-intelligence';
 import { cn } from './lib/utils';
+import { ArticleInsightChips } from './components/ArticleInsightChips';
+import { DeskRadarPanel } from './components/DeskRadarPanel';
+import { DeskSavedSearchesPanel } from './components/DeskSavedSearchesPanel';
+import { DeskWatchlistPanel } from './components/DeskWatchlistPanel';
+import { ExecutiveBriefingPanel } from './components/ExecutiveBriefingPanel';
 
 const FEED_SETTINGS_STORAGE_KEY = 'baky-news-feed-settings';
 const ENGAGEMENT_STORAGE_KEY = 'baky-news-engagement-v1';
+const SAVED_SEARCHES_STORAGE_KEY = 'baky-news-saved-searches-v1';
+const WATCHLIST_STORAGE_KEY = 'baky-news-watchlists-v1';
 
 const DEFAULT_FEED_SETTINGS: FeedSettings = {
   language: 'sk',
@@ -70,6 +91,8 @@ interface EngagementState {
   sourceScores: Record<string, number>;
   topicScores: Record<string, number>;
 }
+
+type TopicFocus = string | null;
 
 function createEmptyEngagementState(): EngagementState {
   return {
@@ -253,6 +276,35 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+function readStoredStringList(storageKey: string) {
+  if (typeof window === 'undefined') {
+    return [] as string[];
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(storageKey);
+    if (!rawValue) {
+      return [];
+    }
+
+    const parsed = JSON.parse(rawValue);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return Array.from(
+      new Set(
+        parsed
+          .filter((value): value is string => typeof value === 'string')
+          .map((value) => value.trim())
+          .filter(Boolean)
+      )
+    );
+  } catch {
+    return [];
+  }
+}
+
 function readStoredEngagementState(): EngagementState {
   if (typeof window === 'undefined') {
     return createEmptyEngagementState();
@@ -417,6 +469,35 @@ function getTopScoreLabel(scores: Record<string, number>, fallback: string) {
   return topEntry?.[0]?.replace(/-/g, ' ') ?? fallback;
 }
 
+function matchesDeskFilters(
+  article: NewsArticle,
+  focusedTopic: TopicFocus,
+  readTimeFilter: DeskReadTimeFilter,
+  sourceFilter: DeskSourceFilter,
+  insight: ReturnType<typeof buildArticleInsight>
+) {
+  if (!matchesSourceFilter(insight.trust, sourceFilter)) {
+    return false;
+  }
+
+  if (!matchesReadTimeFilter(insight.readTimeMinutes, readTimeFilter)) {
+    return false;
+  }
+
+  if (!focusedTopic) {
+    return true;
+  }
+
+  const normalizedFocus = normalizeSignalText(focusedTopic);
+
+  return (
+    articleMatchesTopic(article, focusedTopic) ||
+    insight.entities.some((entity) => normalizeSignalText(entity).includes(normalizedFocus)) ||
+    normalizeSignalText(insight.impactLabel).includes(normalizedFocus) ||
+    normalizeSignalText(article.source.name).includes(normalizedFocus)
+  );
+}
+
 function formatShortDate(value: string) {
   return new Date(value).toLocaleDateString('sk-SK', {
     month: 'short',
@@ -435,10 +516,11 @@ function formatLongDate(value: string) {
 
 interface FeedLeadStoryProps {
   article: NewsArticle;
+  insight?: ReturnType<typeof buildArticleInsight>;
   onSelect: (article: NewsArticle) => void;
 }
 
-function FeedLeadStory({ article, onSelect }: FeedLeadStoryProps) {
+function FeedLeadStory({ article, insight, onSelect }: FeedLeadStoryProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(article.urlToImage) && !imageFailed;
 
@@ -482,6 +564,12 @@ function FeedLeadStory({ article, onSelect }: FeedLeadStoryProps) {
               {formatLongDate(article.publishedAt)}
             </span>
           </div>
+
+          {insight ? (
+            <div className="mb-2.5">
+              <ArticleInsightChips compact insight={insight} />
+            </div>
+          ) : null}
 
           <h3 className="max-w-3xl font-display text-[18px] leading-tight text-slate-950 sm:text-[42px]">
             {article.title}
@@ -902,6 +990,18 @@ export default function App() {
   const [visibleArticlesCount, setVisibleArticlesCount] = useState(12);
   const [signalMode, setSignalMode] = useState(false);
   const [feedView, setFeedView] = useState<FeedView>('top');
+  const [digestMode, setDigestMode] = useState<DeskDigestMode>('feed');
+  const [sourceFilter, setSourceFilter] = useState<DeskSourceFilter>('all');
+  const [readTimeFilter, setReadTimeFilter] = useState<DeskReadTimeFilter>('all');
+  const [focusedTopic, setFocusedTopic] = useState<TopicFocus>(null);
+  const [savedSearches, setSavedSearches] = useState<string[]>(() =>
+    readStoredStringList(SAVED_SEARCHES_STORAGE_KEY)
+  );
+  const [activeWatchlistIds, setActiveWatchlistIds] = useState<string[]>(() =>
+    readStoredStringList(WATCHLIST_STORAGE_KEY).filter((watchlistId) =>
+      DESK_WATCHLISTS.some((watchlist) => watchlist.id === watchlistId)
+    )
+  );
   const [engagement, setEngagement] = useState<EngagementState>(
     readStoredEngagementState
   );
@@ -929,17 +1029,75 @@ export default function App() {
     });
   }, [articles, signalMode]);
 
+  const articleInsights = useMemo(
+    () =>
+      Object.fromEntries(
+        articles.map((article) => [
+          article.url,
+          buildArticleInsight(article, feedSettings, activeWatchlistIds),
+        ])
+      ) as Record<string, ReturnType<typeof buildArticleInsight>>,
+    [activeWatchlistIds, articles, feedSettings]
+  );
+
+  const deskFilteredArticles = useMemo(
+    () =>
+      filteredArticles.filter((article) =>
+        matchesDeskFilters(
+          article,
+          focusedTopic,
+          readTimeFilter,
+          sourceFilter,
+          articleInsights[article.url]
+        )
+      ),
+    [articleInsights, filteredArticles, focusedTopic, readTimeFilter, sourceFilter]
+  );
+
+  const watchlistCounts = useMemo(
+    () =>
+      Object.fromEntries(
+        DESK_WATCHLISTS.map((watchlist) => [
+          watchlist.id,
+          filteredArticles.filter((article) => articleMatchesWatchlist(article, watchlist.id))
+            .length,
+        ])
+      ) as Record<string, number>,
+    [filteredArticles]
+  );
+
+  const rankedTopArticles = useMemo(
+    () => prioritizeWatchlists(deskFilteredArticles, activeWatchlistIds),
+    [activeWatchlistIds, deskFilteredArticles]
+  );
+
   const forYouArticles = useMemo(
-    () => rankForYouArticles(filteredArticles, engagement, feedSettings),
-    [engagement, feedSettings, filteredArticles]
+    () => rankForYouArticles(rankedTopArticles, engagement, feedSettings),
+    [engagement, feedSettings, rankedTopArticles]
   );
 
   const savedArticles = useMemo(
     () =>
       Object.keys(engagement.savedArticles)
         .map((url) => engagement.savedArticles[url])
+        .filter((article) =>
+          matchesDeskFilters(
+            article,
+            focusedTopic,
+            readTimeFilter,
+            sourceFilter,
+            buildArticleInsight(article, feedSettings, activeWatchlistIds)
+          )
+        )
         .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt)),
-    [engagement.savedArticles]
+    [
+      activeWatchlistIds,
+      engagement.savedArticles,
+      feedSettings,
+      focusedTopic,
+      readTimeFilter,
+      sourceFilter,
+    ]
   );
 
   const activeArticles = useMemo(() => {
@@ -951,13 +1109,27 @@ export default function App() {
       return savedArticles;
     }
 
-    return filteredArticles;
-  }, [feedView, filteredArticles, forYouArticles, savedArticles]);
+    return rankedTopArticles;
+  }, [feedView, forYouArticles, rankedTopArticles, savedArticles]);
 
   const savedArticleCount = savedArticles.length;
   const openedTodayCount = getTodayOpenedCount(engagement);
   const topSourceLabel = getTopScoreLabel(engagement.sourceScores, 'mix zdrojov');
   const topTopicLabel = getTopScoreLabel(engagement.topicScores, 'aktuálne správy');
+  const executiveBrief = useMemo(
+    () =>
+      buildExecutiveBrief(
+        activeArticles.length > 0 ? activeArticles : rankedTopArticles,
+        feedSettings,
+        editorial,
+        activeWatchlistIds
+      ),
+    [activeArticles, activeWatchlistIds, editorial, feedSettings, rankedTopArticles]
+  );
+  const radarSnapshot = useMemo(
+    () => buildRadarSnapshot(deskFilteredArticles, feedSettings, activeWatchlistIds),
+    [activeWatchlistIds, deskFilteredArticles, feedSettings]
+  );
 
   useEffect(() => {
     window.localStorage.setItem(FEED_SETTINGS_STORAGE_KEY, JSON.stringify(feedSettings));
@@ -968,10 +1140,28 @@ export default function App() {
   }, [engagement]);
 
   useEffect(() => {
+    window.localStorage.setItem(
+      SAVED_SEARCHES_STORAGE_KEY,
+      JSON.stringify(savedSearches)
+    );
+  }, [savedSearches]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      WATCHLIST_STORAGE_KEY,
+      JSON.stringify(activeWatchlistIds)
+    );
+  }, [activeWatchlistIds]);
+
+  useEffect(() => {
     if (feedSettings.useLocation) {
       setLocationActionError(null);
     }
   }, [feedSettings.useLocation]);
+
+  useEffect(() => {
+    setFocusedTopic(null);
+  }, [category, searchQuery]);
 
   const loadData = useCallback(
     async (nextCategory: Category, query: string = '', refresh: boolean = false) => {
@@ -1102,12 +1292,20 @@ export default function App() {
   const resetSearch = () => {
     setSearchInput('');
     setSearchQuery('');
+    setFocusedTopic(null);
+  };
+
+  const runSearchQuery = (query: string) => {
+    const nextQuery = query.trim();
+    setCategory('general');
+    setFeedView('top');
+    setDigestMode('briefing');
+    setFocusedTopic(null);
+    setSearchQuery(nextQuery);
   };
 
   const handleSearch = () => {
-    const nextQuery = searchInput.trim();
-    setCategory('general');
-    setSearchQuery(nextQuery);
+    runSearchQuery(searchInput);
   };
 
   const handleRefresh = () => {
@@ -1131,6 +1329,42 @@ export default function App() {
     } finally {
       setIsResolvingLocation(false);
     }
+  };
+
+  const handleSaveCurrentSearch = () => {
+    const nextQuery = (searchQuery || searchInput).trim();
+    if (!nextQuery) {
+      return;
+    }
+
+    setSavedSearches((current) =>
+      [nextQuery, ...current.filter((query) => query !== nextQuery)].slice(0, 8)
+    );
+  };
+
+  const handleRunSavedSearch = (query: string) => {
+    setSearchInput(query);
+    runSearchQuery(query);
+  };
+
+  const handleRemoveSavedSearch = (query: string) => {
+    setSavedSearches((current) => current.filter((item) => item !== query));
+  };
+
+  const handleToggleWatchlist = (watchlistId: string) => {
+    setActiveWatchlistIds((current) =>
+      current.includes(watchlistId)
+        ? current.filter((item) => item !== watchlistId)
+        : [...current, watchlistId]
+    );
+    setFeedView('top');
+    setDigestMode('radar');
+  };
+
+  const handleFocusTopic = (topic: string) => {
+    setFocusedTopic((current) => (current === topic ? null : topic));
+    setFeedView('top');
+    setDigestMode('radar');
   };
 
   const handleSelectArticle = useCallback((article: NewsArticle) => {
@@ -1225,22 +1459,31 @@ export default function App() {
   );
 
   const visibleArticles = activeArticles.slice(0, visibleArticlesCount);
-  const leadArticle = visibleArticles[0] ?? null;
-  const briefingArticles = visibleArticles.slice(1, 5);
+  const leadArticle = digestMode === 'briefing' ? null : visibleArticles[0] ?? null;
+  const briefingArticles =
+    digestMode === 'briefing' ? visibleArticles.slice(0, 5) : visibleArticles.slice(1, 5);
   const gridArticles = visibleArticles.slice(5);
   const remainingArticles = Math.max(activeArticles.length - visibleArticlesCount, 0);
-  const relatedArticlePool = activeArticles.length > 1 ? activeArticles : filteredArticles;
+  const relatedArticlePool =
+    activeArticles.length > 1 ? activeArticles : deskFilteredArticles;
   const selectedRelatedArticles = useMemo(
     () =>
       selectedArticle ? getRelatedArticles(selectedArticle, relatedArticlePool) : [],
     [relatedArticlePool, selectedArticle]
   );
+  const getInsightForArticle = (article: NewsArticle) =>
+    articleInsights[article.url] ?? buildArticleInsight(article, feedSettings, activeWatchlistIds);
+  const selectedArticleInsight = selectedArticle
+    ? getInsightForArticle(selectedArticle)
+    : null;
   const feedMeta = buildActiveFeedMeta(category, searchQuery, feedView);
   const settingsLabel = feedSettings.useLocation && feedSettings.location?.label
     ? `${feedSettings.language.toUpperCase()} / ${feedSettings.location.label}`
     : `${feedSettings.language.toUpperCase()} / ${feedSettings.region}`;
   const shouldShowLocationSetup =
     !feedSettings.useLocation && !searchQuery && category === 'general';
+  const shouldShowExecutiveBrief =
+    digestMode !== 'feed' || activeWatchlistIds.length > 0 || searchQuery.length > 0;
 
   return (
     <div className="min-h-screen bg-[#f4f5f7] text-slate-950">
@@ -1427,6 +1670,28 @@ export default function App() {
                   </div>
                 </div>
 
+                <DeskSavedSearchesPanel
+                  currentValue={searchInput || searchQuery}
+                  onRemoveSearch={handleRemoveSavedSearch}
+                  onRunSearch={handleRunSavedSearch}
+                  onSaveCurrent={handleSaveCurrentSearch}
+                  savedSearches={savedSearches}
+                />
+
+                {shouldShowExecutiveBrief ? (
+                  <ExecutiveBriefingPanel
+                    brief={executiveBrief}
+                    digestMode={digestMode}
+                  />
+                ) : null}
+
+                <DeskWatchlistPanel
+                  activeIds={activeWatchlistIds}
+                  counts={watchlistCounts}
+                  onToggle={handleToggleWatchlist}
+                  watchlists={DESK_WATCHLISTS}
+                />
+
                 <FeedViewTabs
                   activeView={feedView}
                   onViewChange={setFeedView}
@@ -1440,12 +1705,54 @@ export default function App() {
                   />
                 ) : null}
 
-                {leadArticle ? (
-                  <FeedLeadStory article={leadArticle} onSelect={handleSelectArticle} />
+                {digestMode === 'briefing' && briefingArticles.length > 0 ? (
+                  <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-3 sm:p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500 sm:text-xs sm:tracking-[0.16em]">
+                          Executive queue
+                        </p>
+                        <h3 className="mt-1 text-base font-semibold text-slate-950 sm:mt-2 sm:text-lg">
+                          Briefing articles
+                        </h3>
+                      </div>
+                      <Sparkles className="h-4 w-4 text-sky-700" />
+                    </div>
+
+                    <div className="mt-3 space-y-2 sm:mt-4 sm:space-y-3">
+                      {briefingArticles.map((article) => (
+                        <div key={article.url}>
+                          <BriefingItem
+                            article={article}
+                            onSelect={handleSelectArticle}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ) : leadArticle ? (
+                  <FeedLeadStory
+                    article={leadArticle}
+                    insight={getInsightForArticle(leadArticle)}
+                    onSelect={handleSelectArticle}
+                  />
                 ) : null}
               </div>
 
               <aside className="space-y-3 sm:space-y-5">
+                <DeskRadarPanel
+                  digestMode={digestMode}
+                  focusedTopic={focusedTopic}
+                  onClearTopic={() => setFocusedTopic(null)}
+                  onDigestModeChange={setDigestMode}
+                  onReadTimeFilterChange={setReadTimeFilter}
+                  onSourceFilterChange={setSourceFilter}
+                  onTopicSelect={handleFocusTopic}
+                  radar={radarSnapshot}
+                  readTimeFilter={readTimeFilter}
+                  sourceFilter={sourceFilter}
+                />
+
                 <WeatherWidget
                   isLoading={isWeatherLoading}
                   weather={weather}
@@ -1460,6 +1767,7 @@ export default function App() {
                   topTopic={topTopicLabel}
                 />
 
+                {digestMode !== 'briefing' ? (
                 <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-3 sm:p-5">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1487,6 +1795,7 @@ export default function App() {
                     )}
                   </div>
                 </section>
+                ) : null}
 
                 <section className="news-soft-shadow rounded-lg border border-slate-200/80 bg-white/85 p-3 sm:p-5">
                   <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500 sm:text-xs sm:tracking-[0.16em]">
@@ -1590,7 +1899,12 @@ export default function App() {
                 <div className="grid gap-3.5 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
                   {gridArticles.map((article, index) => (
                     <div key={article.url}>
-                      <NewsCard article={article} index={index} onSelect={handleSelectArticle} />
+                      <NewsCard
+                        article={article}
+                        index={index}
+                        insight={getInsightForArticle(article)}
+                        onSelect={handleSelectArticle}
+                      />
                     </div>
                   ))}
                 </div>
@@ -1634,6 +1948,7 @@ export default function App() {
 
       <ArticleModal
         article={selectedArticle}
+        insight={selectedArticleInsight}
         isSaved={
           selectedArticle ? Boolean(engagement.savedArticles[selectedArticle.url]) : false
         }

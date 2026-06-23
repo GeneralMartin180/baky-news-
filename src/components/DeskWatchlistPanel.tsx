@@ -1,0 +1,78 @@
+import { Target } from 'lucide-react';
+
+import { DeskWatchlistOption } from '../lib/news-intelligence';
+import { cn } from '../lib/utils';
+
+interface DeskWatchlistPanelProps {
+  activeIds: string[];
+  counts: Record<string, number>;
+  onToggle: (watchlistId: string) => void;
+  watchlists: DeskWatchlistOption[];
+}
+
+export function DeskWatchlistPanel({
+  activeIds,
+  counts,
+  onToggle,
+  watchlists,
+}: DeskWatchlistPanelProps) {
+  return (
+    <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-3 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500 sm:text-xs">
+            Watchlist
+          </p>
+          <h3 className="mt-1 text-base font-semibold text-slate-950 sm:text-lg">
+            Theme tracking
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Aktivne temy dostanu prioritu v desk vrstvach a radar paneloch.
+          </p>
+        </div>
+        <Target className="mt-1 h-4 w-4 text-sky-700" />
+      </div>
+
+      <div className="mt-4 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+        {watchlists.map((watchlist) => {
+          const isActive = activeIds.includes(watchlist.id);
+
+          return (
+            <button
+              key={watchlist.id}
+              type="button"
+              onClick={() => onToggle(watchlist.id)}
+              className={cn(
+                'news-pressable rounded-lg border px-3 py-3 text-left',
+                isActive
+                  ? 'border-slate-950 bg-slate-950 text-white'
+                  : 'border-slate-200/80 bg-slate-50/70 text-slate-800 hover:border-slate-300 hover:bg-white'
+              )}
+              aria-pressed={isActive}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold">{watchlist.label}</span>
+                <span
+                  className={cn(
+                    'rounded-full px-2 py-0.5 text-[11px] font-medium',
+                    isActive ? 'bg-white/12 text-white' : 'bg-white text-slate-500'
+                  )}
+                >
+                  {counts[watchlist.id] ?? 0}
+                </span>
+              </div>
+              <div
+                className={cn(
+                  'mt-1.5 text-xs leading-5',
+                  isActive ? 'text-white/72' : 'text-slate-500'
+                )}
+              >
+                {watchlist.description}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
