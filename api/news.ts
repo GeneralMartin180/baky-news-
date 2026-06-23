@@ -142,12 +142,14 @@ const BBC_FEEDS: Record<Category, FeedCandidate[]> = {
 const SLOVAK_FEEDS: Record<Category, FeedCandidate[]> = {
   business: [
     { label: "aktuality-business", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/ekonomika/" },
+    { label: "startitup-business", sourceName: "Startitup", url: "https://www.startitup.sk/feed/" },
   ],
   entertainment: [
     { label: "aktuality-koktejl", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/koktejl/" },
   ],
   general: [
     { label: "aktuality-general", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/" },
+    { label: "startitup-general", sourceName: "Startitup", url: "https://www.startitup.sk/feed/" },
   ],
   health: [
     { label: "aktuality-health", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/zdravie/" },

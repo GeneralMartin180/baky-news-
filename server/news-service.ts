@@ -507,6 +507,7 @@ function buildLocalEditionCandidates(
   return dedupeFeedCandidates([
     ...buildFeedCandidates("general", "", language, region),
     { label: "aktuality-business", url: "https://www.aktuality.sk/rss/ekonomika/" },
+    { label: "startitup-business", url: "https://www.startitup.sk/feed/" },
     ...BBC_FEEDS.business,
   ]);
 }
@@ -534,6 +535,7 @@ function buildFeedCandidates(
     case "business":
       return [
         { label: "aktuality-business", url: "https://www.aktuality.sk/rss/ekonomika/" },
+        { label: "startitup-business", url: "https://www.startitup.sk/feed/" },
         ...BBC_FEEDS.business,
       ];
     case "sports":
@@ -554,6 +556,7 @@ function buildFeedCandidates(
     default:
       return [
         { label: "aktuality-general", url: "https://www.aktuality.sk/rss/" },
+        { label: "startitup-general", url: "https://www.startitup.sk/feed/" },
         ...BBC_FEEDS.general,
       ];
   }
@@ -691,6 +694,7 @@ function isJunkImage(imageUrl: string): boolean {
 
 function getFallbackSourceName(label: string): string {
   if (label.includes("bbc")) return label.includes("sport") ? "BBC Sport" : "BBC News";
+  if (label.includes("startitup")) return "Startitup";
   if (label.includes("zive")) return "Zive.sk";
   if (label.includes("sport")) return "Sport.sk";
   if (label.includes("aktuality")) return "Aktuality.sk";
