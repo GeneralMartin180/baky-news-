@@ -1,16 +1,55 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Calendar, ExternalLink, Globe, X } from 'lucide-react';
+import {
+  Bookmark,
+  BookmarkCheck,
+  Calendar,
+  ExternalLink,
+  Globe,
+  Newspaper,
+  Target,
+  ThumbsDown,
+  ThumbsUp,
+  X,
+} from 'lucide-react';
 
 import { LoadingIndicator } from './LoadingIndicator';
 import { NewsArticle } from '../types';
+import { cn } from '../lib/utils';
+
+export type ArticleReaction = 'important' | 'track' | 'less';
+
+const reactionOptions: Array<{
+  icon: typeof ThumbsUp;
+  id: ArticleReaction;
+  label: string;
+}> = [
+  { icon: ThumbsUp, id: 'important', label: 'Dôležité' },
+  { icon: Target, id: 'track', label: 'Sledovať' },
+  { icon: ThumbsDown, id: 'less', label: 'Menej' },
+];
 
 interface ArticleModalProps {
   article: NewsArticle | null;
+  isSaved?: boolean;
   onClose: () => void;
+  onReact?: (article: NewsArticle, reaction: ArticleReaction) => void;
+  onSelectRelated?: (article: NewsArticle) => void;
+  onToggleSave?: (article: NewsArticle) => void;
+  reaction?: ArticleReaction | null;
+  relatedArticles?: NewsArticle[];
 }
 
-export function ArticleModal({ article, onClose }: ArticleModalProps) {
+export function ArticleModal({
+  article,
+  isSaved = false,
+  onClose,
+  onReact,
+  onSelectRelated,
+  onToggleSave,
+  reaction = null,
+  relatedArticles = [],
+}: ArticleModalProps) {
   const [fullContent, setFullContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +135,23 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
             </div>
 
             <div className="flex items-center gap-2">
+              {onToggleSave ? (
+                <button
+                  type="button"
+                  onClick={() => onToggleSave(article)}
+                  className="news-pressable inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 sm:h-auto sm:w-auto sm:gap-2 sm:px-4 sm:py-2 sm:text-sm sm:font-medium"
+                  aria-pressed={isSaved}
+                  aria-label={isSaved ? 'Odobrať z uložených' : 'Uložiť článok'}
+                  title={isSaved ? 'Odobrať z uložených' : 'Uložiť článok'}
+                >
+                  {isSaved ? (
+                    <BookmarkCheck className="h-4 w-4" />
+                  ) : (
+                    <Bookmark className="h-4 w-4" />
+                  )}
+                  <span className="hidden sm:inline">{isSaved ? 'Uložené' : 'Uložiť'}</span>
+                </button>
+              ) : null}
               <a
                 href={article.url}
                 target="_blank"
@@ -138,6 +194,33 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
                 {article.description}
               </p>
 
+              {onReact ? (
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {reactionOptions.map((option) => {
+                    const Icon = option.icon;
+                    const isActive = reaction === option.id;
+
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => onReact(article, option.id)}
+                        className={cn(
+                          'news-pressable inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium',
+                          isActive
+                            ? 'border-slate-950 bg-slate-950 text-white'
+                            : 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950'
+                        )}
+                        aria-pressed={isActive}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+
               <div className="mt-8">
                 {isLoading ? (
                   <div className="news-soft-shadow flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-lg border border-slate-200/80 bg-slate-50">
@@ -167,6 +250,40 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
                   </div>
                 )}
               </div>
+
+              {relatedArticles.length > 0 ? (
+                <section className="mt-10">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                        Ďalej čítať
+                      </p>
+                      <h3 className="mt-2 text-lg font-semibold text-slate-950">
+                        Súvisiace správy
+                      </h3>
+                    </div>
+                    <Newspaper className="h-4 w-4 text-sky-700" />
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {relatedArticles.map((relatedArticle) => (
+                      <button
+                        key={relatedArticle.url}
+                        type="button"
+                        onClick={() => onSelectRelated?.(relatedArticle)}
+                        className="news-pressable rounded-lg border border-slate-200/80 bg-white px-4 py-3 text-left hover:border-slate-300 hover:bg-slate-50"
+                      >
+                        <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+                          {relatedArticle.source.name}
+                        </div>
+                        <div className="mt-2 line-clamp-3 text-sm font-semibold leading-5 text-slate-950">
+                          {relatedArticle.title}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
 
               <div className="news-soft-shadow mt-10 rounded-lg border border-slate-200/80 bg-slate-50/80 px-5 py-5">
                 <div className="flex items-start gap-3">

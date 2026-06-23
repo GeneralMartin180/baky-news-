@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   AlertCircle,
+  BookOpen,
+  Bookmark,
   Clock3,
   Home,
   LayoutGrid,
@@ -12,6 +14,8 @@ import {
   Search,
   Settings2,
   ShieldCheck,
+  Sparkles,
+  Target,
   Zap,
 } from 'lucide-react';
 
@@ -25,7 +29,7 @@ import {
   WikiSummary,
 } from './types';
 import { fetchNews, fetchWeather, fetchWikiSummary } from './services/api';
-import { ArticleModal } from './components/ArticleModal';
+import { ArticleModal, type ArticleReaction } from './components/ArticleModal';
 import { CategoryFilter } from './components/CategoryFilter';
 import { FeedSettingsModal } from './components/FeedSettingsModal';
 import { LoadingIndicator } from './components/LoadingIndicator';
@@ -42,6 +46,8 @@ import {
 import { cn } from './lib/utils';
 
 const FEED_SETTINGS_STORAGE_KEY = 'baky-news-feed-settings';
+const ENGAGEMENT_STORAGE_KEY = 'baky-news-engagement-v1';
+
 const DEFAULT_FEED_SETTINGS: FeedSettings = {
   language: 'sk',
   region: 'SK',
@@ -49,6 +55,31 @@ const DEFAULT_FEED_SETTINGS: FeedSettings = {
   localEdition: 'all',
   useLocation: false,
 };
+
+type FeedView = 'top' | 'for-you' | 'saved';
+
+interface OpenedArticleState {
+  count: number;
+  lastOpenedAt: string;
+}
+
+interface EngagementState {
+  opened: Record<string, OpenedArticleState>;
+  reactions: Record<string, ArticleReaction>;
+  savedArticles: Record<string, NewsArticle>;
+  sourceScores: Record<string, number>;
+  topicScores: Record<string, number>;
+}
+
+function createEmptyEngagementState(): EngagementState {
+  return {
+    opened: {},
+    reactions: {},
+    savedArticles: {},
+    sourceScores: {},
+    topicScores: {},
+  };
+}
 
 const SUPPORTED_LANGUAGES = ['sk', 'en', 'cs', 'de'] as const;
 const SUPPORTED_REGIONS = ['SK', 'US', 'GB', 'CZ', 'DE', 'AT'] as const;
@@ -61,6 +92,63 @@ const SUPPORTED_LOCAL_EDITIONS = [
   'rimavska-sobota',
   'vychod',
 ] as const;
+
+const TOPIC_STOP_WORDS = new Set([
+  'ako',
+  'ale',
+  'and',
+  'are',
+  'bez',
+  'bol',
+  'bola',
+  'boli',
+  'bude',
+  'byť',
+  'byt',
+  'can',
+  'for',
+  'from',
+  'his',
+  'ich',
+  'jeho',
+  'jej',
+  'ked',
+  'ktora',
+  'ktore',
+  'ktory',
+  'maju',
+  'nad',
+  'news',
+  'not',
+  'podla',
+  'počas',
+  'pocas',
+  'pre',
+  'pred',
+  'pri',
+  'proti',
+  'sa',
+  'she',
+  'sme',
+  'som',
+  'spravy',
+  'the',
+  'that',
+  'this',
+  'with',
+  'you',
+  'zo',
+]);
+
+const feedViewOptions: Array<{
+  icon: typeof Newspaper;
+  id: FeedView;
+  label: string;
+}> = [
+  { icon: Newspaper, id: 'top', label: 'Hlavný' },
+  { icon: Sparkles, id: 'for-you', label: 'For You' },
+  { icon: Bookmark, id: 'saved', label: 'Uložené' },
+];
 
 const categoryMeta: Record<
   Category,
@@ -159,6 +247,174 @@ function readStoredFeedSettings(): FeedSettings {
   } catch {
     return DEFAULT_FEED_SETTINGS;
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function readStoredEngagementState(): EngagementState {
+  if (typeof window === 'undefined') {
+    return createEmptyEngagementState();
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(ENGAGEMENT_STORAGE_KEY);
+    if (!rawValue) {
+      return createEmptyEngagementState();
+    }
+
+    const parsed = JSON.parse(rawValue) as Partial<EngagementState>;
+
+    return {
+      opened: isRecord(parsed.opened) ? (parsed.opened as EngagementState['opened']) : {},
+      reactions: isRecord(parsed.reactions)
+        ? (parsed.reactions as EngagementState['reactions'])
+        : {},
+      savedArticles: isRecord(parsed.savedArticles)
+        ? (parsed.savedArticles as EngagementState['savedArticles'])
+        : {},
+      sourceScores: isRecord(parsed.sourceScores)
+        ? (parsed.sourceScores as EngagementState['sourceScores'])
+        : {},
+      topicScores: isRecord(parsed.topicScores)
+        ? (parsed.topicScores as EngagementState['topicScores'])
+        : {},
+    };
+  } catch {
+    return createEmptyEngagementState();
+  }
+}
+
+function normalizeSignalText(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ');
+}
+
+function getArticleKeywords(article: NewsArticle) {
+  const rawText = `${article.title} ${article.description} ${article.source.name}`;
+  const keywords = normalizeSignalText(rawText)
+    .split(/\s+/)
+    .filter((word) => word.length > 3 && !TOPIC_STOP_WORDS.has(word));
+
+  return Array.from(new Set(keywords)).slice(0, 10);
+}
+
+function getLocationKeywords(feedSettings: FeedSettings) {
+  if (!feedSettings.location?.label) {
+    return [];
+  }
+
+  return normalizeSignalText(feedSettings.location.label)
+    .split(/\s+/)
+    .filter((word) => word.length > 2);
+}
+
+function scoreArticle(
+  article: NewsArticle,
+  engagement: EngagementState,
+  feedSettings: FeedSettings
+) {
+  const keywords = getArticleKeywords(article);
+  const locationKeywords = getLocationKeywords(feedSettings);
+  const sourceName = article.source.name;
+  let score = 0;
+
+  score += engagement.sourceScores[sourceName] ?? 0;
+
+  for (const keyword of keywords) {
+    score += engagement.topicScores[keyword] ?? 0;
+  }
+
+  if (engagement.savedArticles[article.url]) {
+    score += 4;
+  }
+
+  const reaction = engagement.reactions[article.url];
+  if (reaction === 'important') {
+    score += 5;
+  } else if (reaction === 'track') {
+    score += 3;
+  } else if (reaction === 'less') {
+    score -= 18;
+  }
+
+  if (
+    locationKeywords.length > 0 &&
+    locationKeywords.some((keyword) => keywords.includes(keyword))
+  ) {
+    score += 4;
+  }
+
+  const ageMs = Date.now() - Date.parse(article.publishedAt);
+  if (Number.isFinite(ageMs)) {
+    const ageHours = Math.max(0, ageMs / 3_600_000);
+    score += Math.max(0, 8 - ageHours / 4);
+  }
+
+  return score;
+}
+
+function rankForYouArticles(
+  articles: NewsArticle[],
+  engagement: EngagementState,
+  feedSettings: FeedSettings
+) {
+  return [...articles]
+    .map((article, index) => ({
+      article,
+      index,
+      score: scoreArticle(article, engagement, feedSettings),
+    }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map((item) => item.article);
+}
+
+function getRelatedArticles(article: NewsArticle, articles: NewsArticle[]) {
+  const currentKeywords = new Set(getArticleKeywords(article));
+
+  return articles
+    .filter((candidate) => candidate.url !== article.url)
+    .map((candidate) => {
+      const candidateKeywords = getArticleKeywords(candidate);
+      const overlap = candidateKeywords.filter((keyword) =>
+        currentKeywords.has(keyword)
+      ).length;
+      const sourceBoost = candidate.source.name === article.source.name ? 2 : 0;
+
+      return {
+        article: candidate,
+        score: overlap + sourceBoost,
+      };
+    })
+    .filter((candidate) => candidate.score > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        Date.parse(b.article.publishedAt) - Date.parse(a.article.publishedAt)
+    )
+    .slice(0, 4)
+    .map((candidate) => candidate.article);
+}
+
+function getTodayOpenedCount(engagement: EngagementState) {
+  const today = new Date().toDateString();
+
+  return Object.values(engagement.opened).reduce((total, opened) => {
+    if (new Date(opened.lastOpenedAt).toDateString() !== today) {
+      return total;
+    }
+
+    return total + opened.count;
+  }, 0);
+}
+
+function getTopScoreLabel(scores: Record<string, number>, fallback: string) {
+  const [topEntry] = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  return topEntry?.[0]?.replace(/-/g, ' ') ?? fallback;
 }
 
 function formatShortDate(value: string) {
@@ -450,6 +706,176 @@ function buildFeedMeta(category: Category, searchQuery: string) {
   return categoryMeta[category];
 }
 
+function buildActiveFeedMeta(category: Category, searchQuery: string, feedView: FeedView) {
+  if (feedView === 'for-you' && !searchQuery) {
+    return {
+      kicker: 'Personalizovaný výber',
+      title: 'For You feed',
+      description:
+        'Články zoradené podľa toho, čo otváraš, ukladáš a označuješ ako dôležité.',
+    };
+  }
+
+  if (feedView === 'saved') {
+    return {
+      kicker: 'Uložené články',
+      title: 'Čítaj neskôr',
+      description:
+        'Tvoj súkromný zoznam článkov v tomto prehliadači bez účtu a bez subscription vrstvy.',
+    };
+  }
+
+  return buildFeedMeta(category, searchQuery);
+}
+
+interface FeedViewTabsProps {
+  activeView: FeedView;
+  onViewChange: (view: FeedView) => void;
+  savedCount: number;
+}
+
+function FeedViewTabs({ activeView, onViewChange, savedCount }: FeedViewTabsProps) {
+  return (
+    <div
+      className="no-scrollbar flex gap-2 overflow-x-auto rounded-lg border border-slate-200/80 bg-white/80 p-1"
+      role="tablist"
+      aria-label="Výber feedu"
+    >
+      {feedViewOptions.map((option) => {
+        const Icon = option.icon;
+        const isActive = activeView === option.id;
+
+        return (
+          <button
+            key={option.id}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onViewChange(option.id)}
+            className={cn(
+              'news-pressable inline-flex h-10 shrink-0 items-center gap-2 rounded-md px-3.5 text-sm font-medium',
+              isActive
+                ? 'bg-slate-950 text-white shadow-[0_12px_24px_-20px_rgba(15,23,42,0.9)]'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
+            )}
+          >
+            <Icon className="h-4 w-4" />
+            {option.label}
+            {option.id === 'saved' && savedCount > 0 ? (
+              <span
+                className={cn(
+                  'rounded-full px-2 py-0.5 text-[11px]',
+                  isActive ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-500'
+                )}
+              >
+                {savedCount}
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+interface HabitPanelProps {
+  activeView: FeedView;
+  openedToday: number;
+  onViewChange: (view: FeedView) => void;
+  savedCount: number;
+  topSource: string;
+  topTopic: string;
+}
+
+function HabitPanel({
+  activeView,
+  openedToday,
+  onViewChange,
+  savedCount,
+  topSource,
+  topTopic,
+}: HabitPanelProps) {
+  const hour = new Date().getHours();
+  const title =
+    hour < 11
+      ? 'Ranný briefing'
+      : hour < 17
+        ? 'Denný update'
+        : 'Večerný súhrn';
+
+  return (
+    <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+            Baky loop
+          </p>
+          <h3 className="mt-2 text-lg font-semibold text-slate-950">{title}</h3>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Otvor pár správ a feed sa začne skladať podľa tvojho rytmu.
+          </p>
+        </div>
+        <Sparkles className="h-4 w-4 text-sky-700" />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2.5">
+        <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-3 py-3">
+          <div className="text-[11px] uppercase tracking-[0.14em] text-slate-500">
+            Dnes otvorené
+          </div>
+          <div className="mt-1 text-xl font-semibold text-slate-950">
+            {openedToday}
+          </div>
+        </div>
+        <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-3 py-3">
+          <div className="text-[11px] uppercase tracking-[0.14em] text-slate-500">
+            Uložené
+          </div>
+          <div className="mt-1 text-xl font-semibold text-slate-950">{savedCount}</div>
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-2 text-sm leading-6 text-slate-600">
+        <div className="flex items-center gap-2">
+          <Target className="h-4 w-4 text-slate-400" />
+          <span className="line-clamp-1">Téma: {topTopic}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <BookOpen className="h-4 w-4 text-slate-400" />
+          <span className="line-clamp-1">Zdroj: {topSource}</span>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => onViewChange('for-you')}
+          className={cn(
+            'news-pressable inline-flex h-10 items-center justify-center rounded-full border px-3 text-sm font-medium',
+            activeView === 'for-you'
+              ? 'border-slate-950 bg-slate-950 text-white'
+              : 'border-slate-200/80 bg-white text-slate-700 hover:border-slate-300'
+          )}
+        >
+          For You
+        </button>
+        <button
+          type="button"
+          onClick={() => onViewChange('saved')}
+          className={cn(
+            'news-pressable inline-flex h-10 items-center justify-center rounded-full border px-3 text-sm font-medium',
+            activeView === 'saved'
+              ? 'border-slate-950 bg-slate-950 text-white'
+              : 'border-slate-200/80 bg-white text-slate-700 hover:border-slate-300'
+          )}
+        >
+          Uložené
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export default function App() {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [editorial, setEditorial] = useState<EditorialBriefing | null>(null);
@@ -471,6 +897,10 @@ export default function App() {
   const [locationActionError, setLocationActionError] = useState<string | null>(null);
   const [visibleArticlesCount, setVisibleArticlesCount] = useState(12);
   const [signalMode, setSignalMode] = useState(false);
+  const [feedView, setFeedView] = useState<FeedView>('top');
+  const [engagement, setEngagement] = useState<EngagementState>(
+    readStoredEngagementState
+  );
   const controllerRef = useRef<AbortController | null>(null);
   const weatherControllerRef = useRef<AbortController | null>(null);
   const isLoadingRef = useRef(isLoading);
@@ -495,9 +925,43 @@ export default function App() {
     });
   }, [articles, signalMode]);
 
+  const forYouArticles = useMemo(
+    () => rankForYouArticles(filteredArticles, engagement, feedSettings),
+    [engagement, feedSettings, filteredArticles]
+  );
+
+  const savedArticles = useMemo(
+    () =>
+      Object.keys(engagement.savedArticles)
+        .map((url) => engagement.savedArticles[url])
+        .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt)),
+    [engagement.savedArticles]
+  );
+
+  const activeArticles = useMemo(() => {
+    if (feedView === 'for-you') {
+      return forYouArticles;
+    }
+
+    if (feedView === 'saved') {
+      return savedArticles;
+    }
+
+    return filteredArticles;
+  }, [feedView, filteredArticles, forYouArticles, savedArticles]);
+
+  const savedArticleCount = savedArticles.length;
+  const openedTodayCount = getTodayOpenedCount(engagement);
+  const topSourceLabel = getTopScoreLabel(engagement.sourceScores, 'mix zdrojov');
+  const topTopicLabel = getTopScoreLabel(engagement.topicScores, 'aktuálne správy');
+
   useEffect(() => {
     window.localStorage.setItem(FEED_SETTINGS_STORAGE_KEY, JSON.stringify(feedSettings));
   }, [feedSettings]);
+
+  useEffect(() => {
+    window.localStorage.setItem(ENGAGEMENT_STORAGE_KEY, JSON.stringify(engagement));
+  }, [engagement]);
 
   useEffect(() => {
     if (feedSettings.useLocation) {
@@ -605,6 +1069,10 @@ export default function App() {
   }, [selectedArticle]);
 
   useEffect(() => {
+    setVisibleArticlesCount(12);
+  }, [category, feedView, searchQuery, signalMode]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
       if (!document.hidden && !isLoadingRef.current && !selectedArticleRef.current) {
         loadData(category, searchQuery, true);
@@ -661,12 +1129,109 @@ export default function App() {
     }
   };
 
-  const visibleArticles = filteredArticles.slice(0, visibleArticlesCount);
+  const handleSelectArticle = useCallback((article: NewsArticle) => {
+    setSelectedArticle(article);
+    setEngagement((current) => {
+      const keywords = getArticleKeywords(article);
+      const sourceScores = { ...current.sourceScores };
+      const topicScores = { ...current.topicScores };
+      const openedArticle = current.opened[article.url];
+
+      sourceScores[article.source.name] = (sourceScores[article.source.name] ?? 0) + 2;
+      for (const keyword of keywords) {
+        topicScores[keyword] = (topicScores[keyword] ?? 0) + 1;
+      }
+
+      return {
+        ...current,
+        opened: {
+          ...current.opened,
+          [article.url]: {
+            count: (openedArticle?.count ?? 0) + 1,
+            lastOpenedAt: new Date().toISOString(),
+          },
+        },
+        sourceScores,
+        topicScores,
+      };
+    });
+  }, []);
+
+  const handleToggleSaveArticle = useCallback((article: NewsArticle) => {
+    setEngagement((current) => {
+      const savedArticles = { ...current.savedArticles };
+      const sourceScores = { ...current.sourceScores };
+      const topicScores = { ...current.topicScores };
+
+      if (savedArticles[article.url]) {
+        delete savedArticles[article.url];
+      } else {
+        savedArticles[article.url] = article;
+        sourceScores[article.source.name] = (sourceScores[article.source.name] ?? 0) + 1.5;
+        for (const keyword of getArticleKeywords(article)) {
+          topicScores[keyword] = (topicScores[keyword] ?? 0) + 0.75;
+        }
+      }
+
+      return {
+        ...current,
+        savedArticles,
+        sourceScores,
+        topicScores,
+      };
+    });
+  }, []);
+
+  const handleReactArticle = useCallback(
+    (article: NewsArticle, nextReaction: ArticleReaction) => {
+      setEngagement((current) => {
+        const reactions = { ...current.reactions };
+        const sourceScores = { ...current.sourceScores };
+        const topicScores = { ...current.topicScores };
+        const isRemovingReaction = reactions[article.url] === nextReaction;
+
+        if (isRemovingReaction) {
+          delete reactions[article.url];
+        } else {
+          reactions[article.url] = nextReaction;
+        }
+
+        const weight = isRemovingReaction
+          ? 0
+          : nextReaction === 'important'
+            ? 2
+            : nextReaction === 'track'
+              ? 1.25
+              : -2;
+
+        sourceScores[article.source.name] = (sourceScores[article.source.name] ?? 0) + weight;
+        for (const keyword of getArticleKeywords(article)) {
+          topicScores[keyword] = (topicScores[keyword] ?? 0) + weight;
+        }
+
+        return {
+          ...current,
+          reactions,
+          sourceScores,
+          topicScores,
+        };
+      });
+    },
+    []
+  );
+
+  const visibleArticles = activeArticles.slice(0, visibleArticlesCount);
   const leadArticle = visibleArticles[0] ?? null;
   const briefingArticles = visibleArticles.slice(1, 5);
   const gridArticles = visibleArticles.slice(5);
-  const remainingArticles = Math.max(filteredArticles.length - visibleArticlesCount, 0);
-  const feedMeta = buildFeedMeta(category, searchQuery);
+  const remainingArticles = Math.max(activeArticles.length - visibleArticlesCount, 0);
+  const relatedArticlePool = activeArticles.length > 1 ? activeArticles : filteredArticles;
+  const selectedRelatedArticles = useMemo(
+    () =>
+      selectedArticle ? getRelatedArticles(selectedArticle, relatedArticlePool) : [],
+    [relatedArticlePool, selectedArticle]
+  );
+  const feedMeta = buildActiveFeedMeta(category, searchQuery, feedView);
   const settingsLabel = feedSettings.useLocation && feedSettings.location?.label
     ? `${feedSettings.language.toUpperCase()} / ${feedSettings.location.label}`
     : `${feedSettings.language.toUpperCase()} / ${feedSettings.region}`;
@@ -815,7 +1380,7 @@ export default function App() {
               </p>
             </div>
           </div>
-        ) : filteredArticles.length > 0 ? (
+        ) : filteredArticles.length > 0 || feedView === 'saved' ? (
           <>
             <section className="grid gap-6 xl:grid-cols-[minmax(0,1.52fr)_360px] xl:gap-8">
               <div className="space-y-4 sm:space-y-6">
@@ -853,12 +1418,18 @@ export default function App() {
                     ) : null}
                     <span className="news-soft-shadow inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1.5 text-slate-600">
                       <LayoutGrid className="h-3.5 w-3.5" />
-                      {filteredArticles.length} článkov
+                      {activeArticles.length} článkov
                     </span>
                   </div>
                 </div>
 
-                {editorial ? (
+                <FeedViewTabs
+                  activeView={feedView}
+                  onViewChange={setFeedView}
+                  savedCount={savedArticleCount}
+                />
+
+                {feedView !== 'saved' && editorial ? (
                   <EditorialPanel
                     briefing={editorial}
                     localEdition={localEditionSummary}
@@ -866,7 +1437,7 @@ export default function App() {
                 ) : null}
 
                 {leadArticle ? (
-                  <FeedLeadStory article={leadArticle} onSelect={setSelectedArticle} />
+                  <FeedLeadStory article={leadArticle} onSelect={handleSelectArticle} />
                 ) : null}
               </div>
 
@@ -874,6 +1445,15 @@ export default function App() {
                 <WeatherWidget
                   isLoading={isWeatherLoading}
                   weather={weather}
+                />
+
+                <HabitPanel
+                  activeView={feedView}
+                  openedToday={openedTodayCount}
+                  onViewChange={setFeedView}
+                  savedCount={savedArticleCount}
+                  topSource={topSourceLabel}
+                  topTopic={topTopicLabel}
                 />
 
                 <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-4 sm:p-5">
@@ -893,7 +1473,7 @@ export default function App() {
                     {briefingArticles.length > 0 ? (
                       briefingArticles.map((article) => (
                         <div key={article.url}>
-                          <BriefingItem article={article} onSelect={setSelectedArticle} />
+                          <BriefingItem article={article} onSelect={handleSelectArticle} />
                         </div>
                       ))
                     ) : (
@@ -995,11 +1575,16 @@ export default function App() {
                 </span>
               </div>
 
-              {gridArticles.length > 0 ? (
+              {feedView === 'saved' && activeArticles.length === 0 ? (
+                <div className="news-soft-shadow rounded-lg border border-slate-200/80 bg-white px-6 py-10 text-sm leading-6 text-slate-500">
+                  Zatiaľ tu nie sú uložené články. Otvor článok a použi tlačidlo Uložiť,
+                  potom sa ti tu zobrazí súkromný zoznam na čítanie neskôr.
+                </div>
+              ) : gridArticles.length > 0 ? (
                 <div className="grid gap-3.5 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
                   {gridArticles.map((article, index) => (
                     <div key={article.url}>
-                      <NewsCard article={article} index={index} onSelect={setSelectedArticle} />
+                      <NewsCard article={article} index={index} onSelect={handleSelectArticle} />
                     </div>
                   ))}
                 </div>
@@ -1041,7 +1626,20 @@ export default function App() {
         ) : null}
       </main>
 
-      <ArticleModal article={selectedArticle} onClose={() => setSelectedArticle(null)} />
+      <ArticleModal
+        article={selectedArticle}
+        isSaved={
+          selectedArticle ? Boolean(engagement.savedArticles[selectedArticle.url]) : false
+        }
+        onClose={() => setSelectedArticle(null)}
+        onReact={handleReactArticle}
+        onSelectRelated={handleSelectArticle}
+        onToggleSave={handleToggleSaveArticle}
+        reaction={
+          selectedArticle ? engagement.reactions[selectedArticle.url] ?? null : null
+        }
+        relatedArticles={selectedRelatedArticles}
+      />
       <FeedSettingsModal
         isOpen={isSettingsOpen}
         settings={feedSettings}
