@@ -550,8 +550,8 @@ function FeedLeadStory({ article, insight, onSelect }: FeedLeadStoryProps) {
         )}
 
         <div className="absolute inset-x-0 top-0 flex items-center justify-between px-2.5 py-2.5 sm:px-5 sm:py-5">
-          <span className="rounded-full bg-slate-950/78 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.14em] text-white backdrop-blur-sm sm:px-3 sm:py-1 sm:text-[11px] sm:tracking-[0.18em]">
-            Top story
+          <span className="rounded-full bg-red-600 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_8px_18px_-12px_rgba(220,38,38,0.9)] sm:px-3 sm:py-1 sm:text-[11px] sm:tracking-[0.18em]">
+            BREAKING NEWS
           </span>
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/20 via-slate-950/4 to-transparent" />
