@@ -557,6 +557,7 @@ function buildFeedCandidates(
       return [
         { label: "aktuality-general", url: "https://www.aktuality.sk/rss/" },
         { label: "startitup-general", url: "https://www.startitup.sk/feed/" },
+        { label: "eu-featured-news", url: "https://european-union.europa.eu/node/309/rss_en" },
         ...BBC_FEEDS.general,
       ];
   }
@@ -694,6 +695,7 @@ function isJunkImage(imageUrl: string): boolean {
 
 function getFallbackSourceName(label: string): string {
   if (label.includes("bbc")) return label.includes("sport") ? "BBC Sport" : "BBC News";
+  if (label.includes("eu-featured")) return "European Union";
   if (label.includes("startitup")) return "Startitup";
   if (label.includes("zive")) return "Zive.sk";
   if (label.includes("sport")) return "Sport.sk";

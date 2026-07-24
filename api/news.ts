@@ -150,6 +150,7 @@ const SLOVAK_FEEDS: Record<Category, FeedCandidate[]> = {
   general: [
     { label: "aktuality-general", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/" },
     { label: "startitup-general", sourceName: "Startitup", url: "https://www.startitup.sk/feed/" },
+    { label: "eu-featured-news", sourceName: "European Union", url: "https://european-union.europa.eu/node/309/rss_en" },
   ],
   health: [
     { label: "aktuality-health", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/zdravie/" },
