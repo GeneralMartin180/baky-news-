@@ -1737,6 +1737,64 @@ export default function App() {
                     onSelect={handleSelectArticle}
                   />
                 ) : null}
+
+                <div className="hidden xl:block">
+                  <section className="space-y-5">
+                    <div className="flex flex-col gap-3 border-b border-slate-200/80 pb-4">
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                          Pokračovanie feedu
+                        </p>
+                        <h3 className="mt-2 text-xl font-semibold text-slate-950">
+                          Ďalšie správy
+                        </h3>
+                      </div>
+                      <span className="inline-flex items-center gap-2 text-sm text-slate-500">
+                        <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                        Overené zdroje a pokojný produktový prehľad
+                      </span>
+                    </div>
+
+                    {feedView === 'saved' && activeArticles.length === 0 ? (
+                      <div className="news-soft-shadow rounded-lg border border-slate-200/80 bg-white px-6 py-10 text-sm leading-6 text-slate-500">
+                        Zatiaľ tu nie sú uložené články. Otvor článok a použi tlačidlo Uložiť,
+                        potom sa ti tu zobrazí súkromný zoznam na čítanie neskôr.
+                      </div>
+                    ) : gridArticles.length > 0 ? (
+                      <div className="grid gap-3.5 sm:gap-5 md:grid-cols-2">
+                        {gridArticles.map((article, index) => (
+                          <div key={article.url}>
+                            <NewsCard
+                              article={article}
+                              index={index}
+                              insight={getInsightForArticle(article)}
+                              onSelect={handleSelectArticle}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-slate-200/80 bg-white px-6 py-8 text-sm text-slate-500 shadow-sm">
+                        Zatiaľ nie sú dostupné ďalšie články pre túto sekciu.
+                      </div>
+                    )}
+                  </section>
+
+                  {remainingArticles > 0 ? (
+                    <div className="flex justify-center pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setVisibleArticlesCount((current) => current + 12)}
+                        className="news-card-shadow news-pressable inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-medium text-slate-900 hover:border-slate-300 hover:bg-slate-50"
+                      >
+                        Načítať ďalšie správy
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                          +{Math.min(12, remainingArticles)}
+                        </span>
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               <aside className="space-y-3 sm:space-y-5">
@@ -1874,7 +1932,7 @@ export default function App() {
               {wikiSummary ? <WikiCard summary={wikiSummary} /> : null}
             </AnimatePresence>
 
-            <section className="space-y-5">
+            <section className="space-y-5 xl:hidden">
               <div className="flex flex-col gap-3 border-b border-slate-200/80 pb-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
@@ -1916,7 +1974,7 @@ export default function App() {
             </section>
 
             {remainingArticles > 0 ? (
-              <div className="flex justify-center pt-2">
+              <div className="flex justify-center pt-2 xl:hidden">
                 <button
                   type="button"
                   id="load-more-btn"
