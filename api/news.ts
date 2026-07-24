@@ -44,7 +44,7 @@ type NormalizeImageOptions = {
 };
 
 const ARTICLE_IMAGE_CACHE_MS = 60 * 60 * 1000;
-const ARTICLE_IMAGE_ENRICHMENT_LIMIT = 12;
+const ARTICLE_IMAGE_ENRICHMENT_LIMIT = 16;
 const ARTICLE_IMAGE_TIMEOUT_MS = 3000;
 const GOOGLE_NEWS_DECODE_CACHE_MS = 60 * 60 * 1000;
 const articleImageCache = new Map<string, { expiresAt: number; imageUrl: string }>();
@@ -431,6 +431,92 @@ function normalizeImageUrl(value: string, baseUrl = "", options: NormalizeImageO
   return imageUrl;
 }
 
+function extractImageDimensionHints(imageUrl: string) {
+  try {
+    const parsedUrl = new URL(imageUrl);
+    const queryWidth = Number(
+      parsedUrl.searchParams.get("w") ||
+        parsedUrl.searchParams.get("width") ||
+        parsedUrl.searchParams.get("maxwidth") ||
+        0
+    );
+    const queryHeight = Number(
+      parsedUrl.searchParams.get("h") ||
+        parsedUrl.searchParams.get("height") ||
+        parsedUrl.searchParams.get("maxheight") ||
+        0
+    );
+
+    if (queryWidth > 0 || queryHeight > 0) {
+      return {
+        width: queryWidth,
+        height: queryHeight,
+      };
+    }
+
+    const resizeHint =
+      parsedUrl.searchParams.get("resize") ||
+      parsedUrl.searchParams.get("fit") ||
+      parsedUrl.searchParams.get("crop");
+    const resizeMatch = resizeHint?.match(/(\d{2,4})[x,](\d{2,4})/i);
+    if (resizeMatch) {
+      return {
+        width: Number(resizeMatch[1]),
+        height: Number(resizeMatch[2]),
+      };
+    }
+
+    const pathMatch = parsedUrl.pathname.match(/[-_/](\d{2,4})x(\d{2,4})(?=[-_/\.]|$)/i);
+    if (pathMatch) {
+      return {
+        width: Number(pathMatch[1]),
+        height: Number(pathMatch[2]),
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function shouldEnhanceArticleImage(articleUrl: string, imageUrl: string) {
+  if (!imageUrl) {
+    return true;
+  }
+
+  const lowerImageUrl = imageUrl.toLowerCase();
+  if (
+    lowerImageUrl.includes("blank.png") ||
+    lowerImageUrl.includes("/thumb") ||
+    lowerImageUrl.includes("/thumbnail") ||
+    lowerImageUrl.includes("/preview") ||
+    lowerImageUrl.includes("/small")
+  ) {
+    return true;
+  }
+
+  const imageDimensions = extractImageDimensionHints(imageUrl);
+  if (imageDimensions && (imageDimensions.width < 640 || imageDimensions.height < 360)) {
+    return true;
+  }
+
+  try {
+    const articleHost = new URL(articleUrl).hostname.toLowerCase();
+    if (
+      (articleHost === "www.aktuality.sk" || articleHost.endsWith(".aktuality.sk")) &&
+      imageDimensions &&
+      (imageDimensions.width < 720 || imageDimensions.height < 400)
+    ) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+}
+
 function extractBestSrcsetUrl(rawSrcset: string) {
   const candidates = rawSrcset
     .split(",")
@@ -653,46 +739,49 @@ async function decodeGoogleNewsArticleUrl(articleUrl: string) {
   }
 }
 
-async function enrichSearchArticleImages(articles: NewsArticle[], provider: FeedCandidate["provider"]) {
-  if (provider !== "google-news") {
-    return articles;
+async function resolveArticleUrl(articleUrl: string, provider?: FeedCandidate["provider"]) {
+  if (provider === "google-news") {
+    return decodeGoogleNewsArticleUrl(articleUrl);
   }
 
-  const priorityArticles = articles.slice(0, ARTICLE_IMAGE_ENRICHMENT_LIMIT);
-  const enrichedPriorityArticles = await Promise.all(
-    priorityArticles.map(async (article) => {
-      const resolvedUrl = await decodeGoogleNewsArticleUrl(article.url);
-      const imageUrl = await extractPrimaryArticleImage(resolvedUrl);
-
-      return {
-        ...article,
-        url: resolvedUrl,
-        urlToImage: imageUrl || article.urlToImage,
-      };
-    })
-  );
-
-  return [...enrichedPriorityArticles, ...articles.slice(ARTICLE_IMAGE_ENRICHMENT_LIMIT)];
+  return articleUrl;
 }
 
-async function enrichGeneralArticleImages(
+async function enrichArticleImages(
   articles: NewsArticle[],
-  category: Category,
-  query: string
+  provider?: FeedCandidate["provider"]
 ) {
-  if (category !== "general" || query) {
-    return articles;
-  }
+  const result = [...articles];
+  const priorityArticles = articles
+    .map((article, index) => ({ article, index }))
+    .filter(
+      ({ article }) =>
+        provider === "google-news" ||
+        !article.urlToImage ||
+        shouldEnhanceArticleImage(article.url, article.urlToImage)
+    )
+    .slice(0, ARTICLE_IMAGE_ENRICHMENT_LIMIT);
 
-  const priorityArticles = articles.slice(0, ARTICLE_IMAGE_ENRICHMENT_LIMIT);
-  const enrichedPriorityArticles = await Promise.all(
-    priorityArticles.map(async (article) => {
-      const articleImage = await extractPrimaryArticleImage(article.url);
-      return articleImage ? { ...article, urlToImage: articleImage } : article;
+  await Promise.all(
+    priorityArticles.map(async ({ article, index }) => {
+      const resolvedUrl = await resolveArticleUrl(article.url, provider);
+      const articleImage =
+        !article.urlToImage || shouldEnhanceArticleImage(resolvedUrl, article.urlToImage)
+          ? await extractPrimaryArticleImage(resolvedUrl)
+          : "";
+
+      result[index] =
+        resolvedUrl === article.url && (!articleImage || articleImage === article.urlToImage)
+          ? article
+          : {
+              ...article,
+              url: resolvedUrl,
+              urlToImage: articleImage || article.urlToImage,
+            };
     })
   );
 
-  return [...enrichedPriorityArticles, ...articles.slice(ARTICLE_IMAGE_ENRICHMENT_LIMIT)];
+  return result;
 }
 
 function addImageCandidate(
@@ -943,7 +1032,7 @@ async function fetchSearchArticles(candidates: FeedCandidate[], query: string) {
       const articles = filterArticlesByQuery(dedupeArticles(await fetchCandidate(candidate)), query);
       if (articles.length) {
         const rankedArticles = rankArticles(articles, "all", query).slice(0, 36);
-        const enrichedArticles = await enrichSearchArticleImages(rankedArticles, candidate.provider);
+        const enrichedArticles = await enrichArticleImages(rankedArticles, candidate.provider);
         const imageFirstArticles = prioritizeArticlesWithImages(enrichedArticles);
         if (candidate.provider === "google-news" && !imageFirstArticles.slice(0, ARTICLE_IMAGE_ENRICHMENT_LIMIT).some((article) => article.urlToImage)) {
           continue;
@@ -1013,7 +1102,8 @@ async function fetchArticles(
   const filtered = filterArticlesByQuery(dedupeArticles(fetchedArticles), query);
   const ranked = rankArticles(filtered, localEdition, query, locationQuery).slice(0, 36);
   const merged = dedupeArticles([...locationArticles, ...ranked]).slice(0, 36);
-  const articles = await enrichGeneralArticleImages(merged, category, query);
+  const articles =
+    category === "general" && !query ? await enrichArticleImages(merged) : merged;
   return {
     articles,
     sourceMode,

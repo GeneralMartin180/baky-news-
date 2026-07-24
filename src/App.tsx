@@ -1488,7 +1488,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#f4f5f7] text-slate-950">
       <header className="news-glass z-50 border-b border-slate-200/75 pt-[env(safe-area-inset-top)] sm:sticky sm:top-0">
-        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-3 px-3 py-3 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-3 px-3 py-3 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:flex-none sm:gap-4">
             <Logo className="h-10 w-10 shrink-0 sm:h-14 sm:w-14" />
             <div className="min-w-0">
@@ -1573,7 +1573,7 @@ export default function App() {
         </div>
 
         <div className="border-t border-slate-200/75 bg-white/72">
-          <div className="no-scrollbar mx-auto flex w-full max-w-7xl items-center gap-2 overflow-x-auto px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3 lg:px-8">
+          <div className="no-scrollbar mx-auto flex w-full max-w-[1600px] items-center gap-2 overflow-x-auto px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3 lg:px-8">
             <button
               type="button"
               onClick={() => {
@@ -1596,7 +1596,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-3 py-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:gap-10 sm:px-6 sm:py-8 sm:pb-8 lg:px-8">
+      <main className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-6 px-3 py-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:gap-10 sm:px-6 sm:py-8 sm:pb-8 lg:px-8">
         {error ? (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
@@ -1629,7 +1629,7 @@ export default function App() {
           </div>
         ) : filteredArticles.length > 0 || feedView === 'saved' ? (
           <>
-            <section className="grid gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1.52fr)_360px] xl:gap-8">
+            <section className="grid gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-8 2xl:grid-cols-[minmax(0,1fr)_340px]">
               <div className="space-y-3 sm:space-y-6">
                 <div className="flex flex-col gap-2.5 border-b border-slate-200/80 pb-3 sm:gap-5 sm:pb-6 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
@@ -1761,7 +1761,7 @@ export default function App() {
                         potom sa ti tu zobrazí súkromný zoznam na čítanie neskôr.
                       </div>
                     ) : gridArticles.length > 0 ? (
-                      <div className="grid gap-3.5 sm:gap-5 md:grid-cols-2">
+                      <div className="grid gap-3.5 sm:gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                         {gridArticles.map((article, index) => (
                           <div key={article.url}>
                             <NewsCard
@@ -2027,7 +2027,7 @@ export default function App() {
       />
 
       <footer className="border-t border-slate-200/80 bg-white/72 pb-[env(safe-area-inset-bottom)]">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-6 text-sm text-slate-500 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 px-4 py-6 text-sm text-slate-500 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
