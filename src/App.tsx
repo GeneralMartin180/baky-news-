@@ -1494,9 +1494,9 @@ export default function App() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <img
-                  src="/baky-news-wordmark.png"
+                  src="/baky-news-wordmark.svg"
                   alt="Baky News"
-                  className="h-11 w-auto max-w-[245px] object-contain sm:h-16 sm:max-w-[380px] lg:h-[4.5rem] lg:max-w-[430px]"
+                  className="h-12 w-auto max-w-[270px] shrink-0 object-contain sm:h-[4.75rem] sm:max-w-[430px] lg:h-[5.5rem] lg:max-w-[500px]"
                 />
                 <span className="news-soft-shadow hidden rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 sm:inline-flex">
                   Live
