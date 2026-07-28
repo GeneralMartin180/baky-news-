@@ -757,36 +757,36 @@ function LocationSetupCard({
 
 function EditorialPanel({ briefing, localEdition }: EditorialPanelProps) {
   return (
-    <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-3 sm:p-5">
-      <div className="flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:items-start lg:justify-between">
+    <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-3 sm:p-4">
+      <div className="flex flex-col gap-2 sm:gap-2.5 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-3xl">
           <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-sky-700 sm:text-xs sm:tracking-[0.18em]">
             {briefing.kicker}
           </p>
-          <h3 className="mt-1 text-base font-semibold leading-tight text-slate-950 sm:mt-2 sm:text-2xl">
+          <h3 className="mt-1 text-base font-semibold leading-tight text-slate-950 sm:text-xl">
             {briefing.headline}
           </h3>
-          <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-slate-600 sm:mt-2 sm:line-clamp-none sm:text-sm sm:leading-6">
+          <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-slate-600 sm:text-sm sm:leading-5">
             {briefing.summary}
           </p>
         </div>
 
         {localEdition ? (
-          <div className="news-soft-shadow min-w-0 rounded-md border border-sky-100 bg-sky-50/70 px-3 py-2 sm:rounded-lg sm:px-3.5 sm:py-3 lg:min-w-[220px]">
+          <div className="news-soft-shadow min-w-0 rounded-md border border-sky-100 bg-sky-50/70 px-3 py-2 sm:rounded-lg lg:min-w-[200px]">
             <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-sky-700 sm:text-[11px] sm:tracking-[0.16em]">
               {localEdition.badge}
             </div>
-            <div className="mt-0.5 text-sm font-semibold text-slate-950 sm:mt-1 sm:text-base">
+            <div className="mt-0.5 text-sm font-semibold text-slate-950">
               {localEdition.label}
             </div>
-            <p className="mt-1 line-clamp-1 text-xs leading-4 text-slate-600 sm:mt-1.5 sm:line-clamp-none sm:text-sm sm:leading-5">
+            <p className="mt-1 line-clamp-2 text-xs leading-4 text-slate-600">
               {localEdition.description}
             </p>
           </div>
         ) : null}
       </div>
 
-      <div className="mt-4 hidden gap-3 sm:grid lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.9fr)]">
+      <div className="hidden">
         <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-4 py-3.5">
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
             Prečo to riešiť
@@ -1689,15 +1689,15 @@ export default function App() {
           <>
             <section className="grid gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-8 2xl:grid-cols-[minmax(0,1fr)_340px]">
               <div className="space-y-3 sm:space-y-6">
-                <div className="flex flex-col gap-2 border-b border-slate-200/80 pb-3 sm:gap-4 sm:pb-5 lg:flex-row lg:items-end lg:justify-between">
+                <div className="flex flex-col gap-2 border-b border-slate-200/80 pb-3 sm:gap-3 sm:pb-4 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
                     <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-sky-700 sm:text-xs sm:tracking-[0.18em]">
                       {feedMeta.kicker}
                     </p>
-                    <h2 className="mt-1 max-w-4xl font-display text-[23px] leading-tight text-slate-950 sm:mt-3 sm:text-5xl">
+                    <h2 className="mt-1 max-w-4xl font-display text-[22px] leading-tight text-slate-950 sm:mt-2 sm:text-4xl lg:text-[2.65rem]">
                       {feedMeta.title}
                     </h2>
-                    <p className="mt-1 line-clamp-1 text-[12px] leading-5 text-slate-500 sm:mt-2 sm:max-w-2xl sm:text-sm sm:leading-6">
+                    <p className="mt-1 line-clamp-1 text-[12px] leading-5 text-slate-500 sm:max-w-2xl sm:text-sm sm:leading-5">
                       {feedMeta.description}
                     </p>
                   </div>
@@ -1711,7 +1711,7 @@ export default function App() {
                         minute: '2-digit',
                       })}
                     </span>
-                    <span className="news-soft-shadow inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-2.5 py-1 text-slate-600 sm:gap-2 sm:px-3 sm:py-1.5">
+                    <span className="hidden">
                       <Settings2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       {settingsLabel}
                     </span>
