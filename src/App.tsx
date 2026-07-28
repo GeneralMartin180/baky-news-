@@ -77,6 +77,29 @@ const DEFAULT_FEED_SETTINGS: FeedSettings = {
   useLocation: false,
 };
 
+const BREAKING_NEWS_OVERRIDES: Array<{
+  article: NewsArticle;
+  category: Category;
+  expiresAt: string;
+}> = [
+  {
+    category: 'general',
+    expiresAt: '2026-07-29T15:29:10+02:00',
+    article: {
+      title: 'V okrese Rimavská Sobota pátrajú po 16-ročnej Chiare',
+      description:
+        'Polícia vyhlásila pátranie po 16-ročnej Chiare Fekiačovej z okresu Rimavská Sobota a žiada verejnosť o pomoc pri jej vypátraní.',
+      publishedAt: '2026-07-28T12:55:00+02:00',
+      source: {
+        name: 'Bystricak.sk',
+      },
+      url: 'https://www.bystricak.sk/clanky/12462/chiara-z-okresu-rimavska-sobota-sa-nevratila-domov-policia-prosi-o-pomoc-pri-patrani-po-16-rocnom-dievcati',
+      urlToImage:
+        'https://www.bystricak.sk/assets/images/bb/articles/img-1/1785234515-chiara-z-okresu-rimavska-sobota-sa-nevratila-domov-policia-prosi-o-pomoc-pri-patrani-po-16rocnom-dievcati.webp',
+    },
+  },
+];
+
 type FeedView = 'top' | 'for-you' | 'saved';
 
 interface OpenedArticleState {
@@ -462,6 +485,10 @@ function getTodayOpenedCount(engagement: EngagementState) {
 
     return total + opened.count;
   }, 0);
+}
+
+function prependUniqueArticle(articles: NewsArticle[], article: NewsArticle) {
+  return [article, ...articles.filter((candidate) => candidate.url !== article.url)];
 }
 
 function getTopScoreLabel(scores: Record<string, number>, fallback: string) {
@@ -1100,6 +1127,19 @@ export default function App() {
     ]
   );
 
+  const breakingOverride = useMemo(() => {
+    if (category !== 'general' || searchQuery.trim()) {
+      return null;
+    }
+
+    const activeOverride = BREAKING_NEWS_OVERRIDES.find(
+      (override) =>
+        override.category === category && Date.now() < Date.parse(override.expiresAt)
+    );
+
+    return activeOverride?.article ?? null;
+  }, [category, searchQuery]);
+
   const activeArticles = useMemo(() => {
     if (feedView === 'for-you') {
       return forYouArticles;
@@ -1109,8 +1149,10 @@ export default function App() {
       return savedArticles;
     }
 
-    return rankedTopArticles;
-  }, [feedView, forYouArticles, rankedTopArticles, savedArticles]);
+    return breakingOverride
+      ? prependUniqueArticle(rankedTopArticles, breakingOverride)
+      : rankedTopArticles;
+  }, [breakingOverride, feedView, forYouArticles, rankedTopArticles, savedArticles]);
 
   const savedArticleCount = savedArticles.length;
   const openedTodayCount = getTodayOpenedCount(engagement);
@@ -1629,7 +1671,7 @@ export default function App() {
               </p>
             </div>
           </div>
-        ) : filteredArticles.length > 0 || feedView === 'saved' ? (
+        ) : activeArticles.length > 0 || feedView === 'saved' ? (
           <>
             <section className="grid gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-8 2xl:grid-cols-[minmax(0,1fr)_340px]">
               <div className="space-y-3 sm:space-y-6">
