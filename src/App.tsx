@@ -1493,9 +1493,11 @@ export default function App() {
             <Logo className="h-10 w-10 shrink-0 sm:h-14 sm:w-14" />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="truncate text-base font-semibold text-slate-950 sm:text-xl">
-                  Baky News
-                </h1>
+                <img
+                  src="/baky-news-wordmark.png"
+                  alt="Baky News"
+                  className="h-8 w-auto max-w-[170px] object-contain sm:h-10 sm:max-w-[220px]"
+                />
                 <span className="news-soft-shadow hidden rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 sm:inline-flex">
                   Live
                 </span>
