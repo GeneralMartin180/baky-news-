@@ -1489,20 +1489,20 @@ export default function App() {
     <div className="min-h-screen bg-[#f4f5f7] text-slate-950">
       <header className="news-glass z-50 border-b border-slate-200/75 pt-[env(safe-area-inset-top)] sm:sticky sm:top-0">
         <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-3 px-3 py-3 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
-          <div className="flex min-w-0 flex-1 items-center gap-3 sm:flex-none sm:gap-4">
+          <div className="flex min-w-0 flex-1 items-start gap-3 sm:flex-none sm:gap-4">
             <Logo className="h-10 w-10 shrink-0 sm:h-14 sm:w-14" />
-            <div className="min-w-0">
+            <div className="min-w-0 pt-1 sm:pt-1.5 lg:pt-2">
               <div className="flex items-center gap-2">
                 <img
                   src="/baky-news-wordmark.svg"
                   alt="Baky News"
-                  className="relative top-1 h-9 w-auto max-w-[210px] shrink-0 object-contain sm:top-1.5 sm:h-[3.5rem] sm:max-w-[300px] lg:top-2 lg:h-16 lg:max-w-[340px]"
+                  className="h-8 w-auto max-w-[190px] shrink-0 object-contain sm:h-[3.1rem] sm:max-w-[270px] lg:h-[3.25rem] lg:max-w-[290px]"
                 />
                 <span className="news-soft-shadow hidden rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 sm:inline-flex">
                   Live
                 </span>
               </div>
-              <p className="hidden text-xs text-slate-500 sm:block">
+              <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">
                 Rýchly, čistý a čitateľný prehľad správ.
               </p>
             </div>
