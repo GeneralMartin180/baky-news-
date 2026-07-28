@@ -1496,7 +1496,7 @@ export default function App() {
                 <img
                   src="/baky-news-wordmark.svg"
                   alt="Baky News"
-                  className="h-12 w-auto max-w-[270px] shrink-0 object-contain sm:h-[4.75rem] sm:max-w-[430px] lg:h-[5.5rem] lg:max-w-[500px]"
+                  className="h-9 w-auto max-w-[210px] shrink-0 object-contain sm:h-[3.5rem] sm:max-w-[300px] lg:h-16 lg:max-w-[340px]"
                 />
                 <span className="news-soft-shadow hidden rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 sm:inline-flex">
                   Live
