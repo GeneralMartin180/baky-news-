@@ -1502,7 +1502,7 @@ export default function App() {
                   Live
                 </span>
               </div>
-              <p className="hidden">
+              <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">
                 Rýchly, čistý a čitateľný prehľad správ.
               </p>
             </div>
