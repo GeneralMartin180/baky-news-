@@ -63,11 +63,19 @@ export function ArticleModal({
     if (!article) {
       setFullContent(null);
       setError(null);
+      setIsLoading(false);
       setImageFailed(false);
       return;
     }
 
     setImageFailed(false);
+    setError(null);
+    setFullContent(article.contentOverride ?? null);
+    if (article.contentOverride) {
+      setIsLoading(false);
+      return;
+    }
+
     void fetchFullContent(article.url, article.contentToken);
   }, [article]);
 

@@ -1,5 +1,6 @@
 export interface NewsArticle {
   contentToken?: string;
+  contentOverride?: string;
   title: string;
   description: string;
   url: string;

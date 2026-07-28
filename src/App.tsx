@@ -89,6 +89,13 @@ const BREAKING_NEWS_OVERRIDES: Array<{
       title: 'V okrese Rimavská Sobota pátrajú po 16-ročnej Chiare',
       description:
         'Polícia vyhlásila pátranie po 16-ročnej Chiare Fekiačovej z okresu Rimavská Sobota a žiada verejnosť o pomoc pri jej vypátraní.',
+      contentOverride: `Polícia vyhlásila pátranie po 16-ročnej Chiare Fekiačovej z okresu Rimavská Sobota. Obracia sa preto na verejnosť so žiadosťou o pomoc pri jej vypátraní.
+
+Nezvestnou je Chiara Fekiačová, narodená 16. februára 2010, ktorá má trvalý pobyt v okrese Rimavská Sobota. Pátranie po nej bolo vyhlásené v utorok 28. júla. Polícia zatiaľ nezverejnila bližší opis nezvestnej osoby ani informácie o oblečení, ktoré mala na sebe v čase zmiznutia.
+
+Ak ste Chiaru videli alebo máte akékoľvek informácie, ktoré by mohli pomôcť pri jej nájdení, okamžite kontaktujte políciu na tiesňovej linke 158. Informácie je možné oznámiť aj Záchrannému Systému Slovensko - Pátranie po osobách na telefónnom čísle +421 948 112 233.
+
+Polícia zdôrazňuje, že aj zdanlivo nepodstatná informácia môže byť pri pátraní rozhodujúca a pomôcť k čo najskoršiemu nájdeniu nezvestného dievčaťa.`,
       publishedAt: '2026-07-28T12:55:00+02:00',
       source: {
         name: 'Bystricak.sk',
