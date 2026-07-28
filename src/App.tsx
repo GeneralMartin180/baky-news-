@@ -491,6 +491,28 @@ function prependUniqueArticle(articles: NewsArticle[], article: NewsArticle) {
   return [article, ...articles.filter((candidate) => candidate.url !== article.url)];
 }
 
+function getActiveBreakingNewsOverrides(category: Category, query: string) {
+  if (category !== 'general' || query.trim()) {
+    return [] as NewsArticle[];
+  }
+
+  return BREAKING_NEWS_OVERRIDES.filter(
+    (override) =>
+      override.category === category && Date.now() < Date.parse(override.expiresAt)
+  ).map((override) => override.article);
+}
+
+function applyBreakingNewsOverrides(
+  articles: NewsArticle[],
+  category: Category,
+  query: string
+) {
+  return getActiveBreakingNewsOverrides(category, query).reduceRight(
+    (result, article) => prependUniqueArticle(result, article),
+    articles
+  );
+}
+
 function getTopScoreLabel(scores: Record<string, number>, fallback: string) {
   const [topEntry] = Object.entries(scores).sort((a, b) => b[1] - a[1]);
   return topEntry?.[0]?.replace(/-/g, ' ') ?? fallback;
@@ -1127,19 +1149,6 @@ export default function App() {
     ]
   );
 
-  const breakingOverride = useMemo(() => {
-    if (category !== 'general' || searchQuery.trim()) {
-      return null;
-    }
-
-    const activeOverride = BREAKING_NEWS_OVERRIDES.find(
-      (override) =>
-        override.category === category && Date.now() < Date.parse(override.expiresAt)
-    );
-
-    return activeOverride?.article ?? null;
-  }, [category, searchQuery]);
-
   const activeArticles = useMemo(() => {
     if (feedView === 'for-you') {
       return forYouArticles;
@@ -1149,10 +1158,8 @@ export default function App() {
       return savedArticles;
     }
 
-    return breakingOverride
-      ? prependUniqueArticle(rankedTopArticles, breakingOverride)
-      : rankedTopArticles;
-  }, [breakingOverride, feedView, forYouArticles, rankedTopArticles, savedArticles]);
+    return rankedTopArticles;
+  }, [feedView, forYouArticles, rankedTopArticles, savedArticles]);
 
   const savedArticleCount = savedArticles.length;
   const openedTodayCount = getTodayOpenedCount(engagement);
@@ -1242,7 +1249,7 @@ export default function App() {
           return;
         }
 
-        setArticles(newsData.articles);
+        setArticles(applyBreakingNewsOverrides(newsData.articles, nextCategory, query));
         setEditorial(newsData.editorial);
         setLocalEditionSummary(newsData.localEdition);
         setLastUpdated(new Date());
