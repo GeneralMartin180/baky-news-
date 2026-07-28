@@ -1502,7 +1502,7 @@ export default function App() {
                   Live
                 </span>
               </div>
-              <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">
+              <p className="hidden">
                 Rýchly, čistý a čitateľný prehľad správ.
               </p>
             </div>
@@ -1633,7 +1633,7 @@ export default function App() {
           <>
             <section className="grid gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-8 2xl:grid-cols-[minmax(0,1fr)_340px]">
               <div className="space-y-3 sm:space-y-6">
-                <div className="flex flex-col gap-2.5 border-b border-slate-200/80 pb-3 sm:gap-5 sm:pb-6 lg:flex-row lg:items-end lg:justify-between">
+                <div className="flex flex-col gap-2 border-b border-slate-200/80 pb-3 sm:gap-4 sm:pb-5 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
                     <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-sky-700 sm:text-xs sm:tracking-[0.18em]">
                       {feedMeta.kicker}
@@ -1641,13 +1641,13 @@ export default function App() {
                     <h2 className="mt-1 max-w-4xl font-display text-[23px] leading-tight text-slate-950 sm:mt-3 sm:text-5xl">
                       {feedMeta.title}
                     </h2>
-                    <p className="mt-1.5 line-clamp-2 text-[13px] leading-5 text-slate-600 sm:mt-4 sm:line-clamp-none sm:text-[15px] sm:leading-7">
+                    <p className="mt-1 line-clamp-1 text-[12px] leading-5 text-slate-500 sm:mt-2 sm:max-w-2xl sm:text-sm sm:leading-6">
                       {feedMeta.description}
                     </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 text-[11px] sm:gap-2 sm:text-xs">
-                    <span className="news-soft-shadow inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-2.5 py-1 text-slate-600 sm:gap-2 sm:px-3 sm:py-1.5">
+                    <span className="hidden">
                       <Clock3 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       Aktualizované{' '}
                       {lastUpdated.toLocaleTimeString('sk-SK', {
