@@ -16,6 +16,7 @@ export type RequestLike = {
 export type RequestPolicy =
   | "article"
   | "health"
+  | "markets"
   | "news"
   | "weather";
 
@@ -67,6 +68,11 @@ const POLICY_CONFIG: Record<RequestPolicy, PolicyConfig> = {
   },
   news: {
     max: 90,
+    windowMs: 15 * 60 * 1000,
+  },
+  markets: {
+    cooldownMs: 2000,
+    max: 120,
     windowMs: 15 * 60 * 1000,
   },
   weather: {

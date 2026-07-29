@@ -71,6 +71,30 @@ export interface WeatherSnapshot {
   windSpeedKmh: number;
 }
 
+export type CommodityMarketGroup = 'energy' | 'oils' | 'food';
+export type CommodityMarketTrend = 'up' | 'down' | 'flat';
+
+export interface CommodityMarketQuote {
+  changePercent: number | null;
+  group: CommodityMarketGroup;
+  id: string;
+  label: string;
+  previousValue: number | null;
+  shortLabel: string;
+  trend: CommodityMarketTrend;
+  unit: string;
+  value: number;
+}
+
+export interface CommodityMarketSnapshot {
+  frequencyLabel: string;
+  latestPeriod: string;
+  quotes: CommodityMarketQuote[];
+  sourceLabel: string;
+  sourceUrl: string;
+  updatedAt: string;
+}
+
 export interface LocationPreference {
   countryCode?: string;
   enabled: boolean;

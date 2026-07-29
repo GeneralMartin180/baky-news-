@@ -6,6 +6,7 @@ import { createServer as createViteServer } from "vite";
 import {
   handleArticleContentRequest,
   handleHealthRequest,
+  handleMarketsRequest,
   handleNewsRequest,
   handleWeatherRequest,
 } from "./server/api-handlers";
@@ -35,6 +36,7 @@ async function startServer() {
   const port = Number(process.env.PORT) || 3000;
   const newsLimiter = createApiLimiter(120);
   const weatherLimiter = createApiLimiter(120);
+  const marketsLimiter = createApiLimiter(120);
   const articleLimiter = createApiLimiter(24);
   const healthLimiter = createApiLimiter(60);
 
@@ -58,6 +60,10 @@ async function startServer() {
 
   app.get("/api/weather", weatherLimiter, (request, response) => {
     void handleWeatherRequest(request, response);
+  });
+
+  app.get("/api/markets", marketsLimiter, (request, response) => {
+    void handleMarketsRequest(request, response);
   });
 
   app.get("/api/health", healthLimiter, (request, response) => {

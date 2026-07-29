@@ -4,6 +4,7 @@ import {
   getNewsWithMeta,
   HttpError,
 } from "./news-service.ts";
+import { getCommodityMarketSnapshot } from "../api/_lib/commodity-markets.ts";
 import {
   enforceRequestPolicy,
   isBlockedRequestDecision,
@@ -164,6 +165,29 @@ export async function handleWeatherRequest(request: ApiRequestLike, response: Ap
   } catch (error) {
     console.error("Error fetching weather:", error);
     response.status(500).json({ error: "Chyba pri nacitani pocasia." });
+  }
+}
+
+export async function handleMarketsRequest(request: ApiRequestLike, response: ApiResponseLike) {
+  try {
+    const decision = enforceRequestPolicy(request, "markets");
+    if (isBlockedRequestDecision(decision)) {
+      response.status(decision.status).json(decision.payload);
+      return;
+    }
+
+    const snapshot = await getCommodityMarketSnapshot();
+    setCacheControl(
+      response,
+      process.env.NODE_ENV === "production"
+        ? "public, max-age=1800, s-maxage=21600, stale-while-revalidate=86400"
+        : "no-store"
+    );
+    setHeader(response, "X-Baky-Markets-Source", "world-bank-pink-sheet");
+    response.status(200).json(snapshot);
+  } catch (error) {
+    console.error("Error fetching markets:", error);
+    response.status(500).json({ error: "Chyba pri nacitani komoditnej burzy." });
   }
 }
 

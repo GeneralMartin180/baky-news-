@@ -21,6 +21,7 @@ import {
 
 import {
   Category,
+  CommodityMarketSnapshot,
   EditorialBriefing,
   FeedSettings,
   LocalEditionSummary,
@@ -28,7 +29,7 @@ import {
   WeatherSnapshot,
   WikiSummary,
 } from './types';
-import { fetchNews, fetchWeather, fetchWikiSummary } from './services/api';
+import { fetchCommodityMarkets, fetchNews, fetchWeather, fetchWikiSummary } from './services/api';
 import { ArticleModal, type ArticleReaction } from './components/ArticleModal';
 import { CategoryFilter } from './components/CategoryFilter';
 import { FeedSettingsModal } from './components/FeedSettingsModal';
@@ -38,6 +39,7 @@ import { NewsCard } from './components/NewsCard';
 import { SearchBar } from './components/SearchBar';
 import { WeatherWidget } from './components/WeatherWidget';
 import { WikiCard } from './components/WikiCard';
+import { CommodityMarketWidget } from './components/CommodityMarketWidget';
 import {
   resolveCurrentLocationPreference,
   supportsGeolocation,
@@ -1031,6 +1033,8 @@ export default function App() {
     useState<LocalEditionSummary | null>(null);
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
   const [isWeatherLoading, setIsWeatherLoading] = useState(true);
+  const [commodityMarket, setCommodityMarket] = useState<CommodityMarketSnapshot | null>(null);
+  const [isCommodityMarketLoading, setIsCommodityMarketLoading] = useState(false);
   const [wikiSummary, setWikiSummary] = useState<WikiSummary | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
   const [category, setCategory] = useState<Category>('general');
@@ -1063,6 +1067,7 @@ export default function App() {
   );
   const controllerRef = useRef<AbortController | null>(null);
   const weatherControllerRef = useRef<AbortController | null>(null);
+  const commodityMarketControllerRef = useRef<AbortController | null>(null);
   const isLoadingRef = useRef(isLoading);
   const selectedArticleRef = useRef<NewsArticle | null>(selectedArticle);
 
@@ -1315,6 +1320,41 @@ export default function App() {
   }, [feedSettings]);
 
   useEffect(() => {
+    if (category !== 'business') {
+      if (commodityMarketControllerRef.current) {
+        commodityMarketControllerRef.current.abort();
+      }
+      setIsCommodityMarketLoading(false);
+      return;
+    }
+
+    if (commodityMarketControllerRef.current) {
+      commodityMarketControllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    commodityMarketControllerRef.current = controller;
+    setIsCommodityMarketLoading(true);
+
+    void fetchCommodityMarkets(controller.signal)
+      .then((nextMarket) => {
+        if (!controller.signal.aborted) {
+          setCommodityMarket(nextMarket);
+        }
+      })
+      .catch((error: any) => {
+        if (error?.name !== 'AbortError' && !controller.signal.aborted) {
+          setCommodityMarket(null);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsCommodityMarketLoading(false);
+        }
+      });
+  }, [category]);
+
+  useEffect(() => {
     selectedArticleRef.current = selectedArticle;
   }, [selectedArticle]);
 
@@ -1341,6 +1381,9 @@ export default function App() {
       }
       if (weatherControllerRef.current) {
         weatherControllerRef.current.abort();
+      }
+      if (commodityMarketControllerRef.current) {
+        commodityMarketControllerRef.current.abort();
       }
     };
   }, []);
@@ -1868,6 +1911,13 @@ export default function App() {
                   readTimeFilter={readTimeFilter}
                   sourceFilter={sourceFilter}
                 />
+
+                {category === 'business' ? (
+                  <CommodityMarketWidget
+                    isLoading={isCommodityMarketLoading}
+                    market={commodityMarket}
+                  />
+                ) : null}
 
                 <WeatherWidget
                   isLoading={isWeatherLoading}

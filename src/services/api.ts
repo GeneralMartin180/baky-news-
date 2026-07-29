@@ -1,5 +1,6 @@
 import {
   Category,
+  CommodityMarketSnapshot,
   FeedSettings,
   NewsFeedResponse,
   WeatherSnapshot,
@@ -110,6 +111,18 @@ export async function fetchWeather(
   const response = await fetch(url.toString(), { signal });
   if (!response.ok) {
     throw new Error(`Failed to fetch weather from local API (${response.status})`);
+  }
+
+  return await response.json();
+}
+
+export async function fetchCommodityMarkets(
+  signal?: AbortSignal
+): Promise<CommodityMarketSnapshot> {
+  const url = new URL('/api/markets', window.location.origin);
+  const response = await fetch(url.toString(), { signal });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch markets from local API (${response.status})`);
   }
 
   return await response.json();
