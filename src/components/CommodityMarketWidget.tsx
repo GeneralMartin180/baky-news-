@@ -14,6 +14,9 @@ import { cn } from '../lib/utils';
 
 interface CommodityMarketWidgetProps {
   isLoading: boolean;
+  isLive?: boolean;
+  isRefreshing?: boolean;
+  lastRefreshedAt?: string | null;
   market: CommodityMarketSnapshot | null;
 }
 
@@ -57,6 +60,14 @@ function formatTime(value: string) {
     month: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function formatRefreshTime(value: string) {
+  return new Intl.DateTimeFormat('sk-SK', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
   }).format(new Date(value));
 }
 
@@ -332,7 +343,13 @@ function QuoteRow({ quote, delay = 0 }: { quote: CommodityMarketQuote; delay?: n
   );
 }
 
-export function CommodityMarketWidget({ isLoading, market }: CommodityMarketWidgetProps) {
+export function CommodityMarketWidget({
+  isLoading,
+  isLive = false,
+  isRefreshing = false,
+  lastRefreshedAt = null,
+  market,
+}: CommodityMarketWidgetProps) {
   const groupedQuotes = {
     energy: market?.quotes.filter((quote) => quote.group === 'energy') ?? [],
     oils: market?.quotes.filter((quote) => quote.group === 'oils') ?? [],
@@ -360,9 +377,15 @@ export function CommodityMarketWidget({ isLoading, market }: CommodityMarketWidg
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500 sm:text-xs">
             Biznis radar
           </p>
-          <h3 className="mt-1 text-sm font-semibold text-slate-950 sm:text-base">
-            Komoditna burza
-          </h3>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-950 sm:text-base">Komoditna burza</h3>
+            {isLive ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                {isRefreshing ? 'Live sync' : 'Live'}
+              </span>
+            ) : null}
+          </div>
           <p className="mt-0.5 text-[11px] text-slate-500 sm:text-xs">
             {market
               ? `${formatPeriod(market.latestPeriod)} · ${market.frequencyLabel}`
@@ -446,7 +469,11 @@ export function CommodityMarketWidget({ isLoading, market }: CommodityMarketWidg
 
           <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
             <span>{market.sourceLabel}</span>
-            <span>Publikovane {formatTime(market.updatedAt)}</span>
+            <span>
+              {isLive && lastRefreshedAt
+                ? `Live refresh ${formatRefreshTime(lastRefreshedAt)}`
+                : `Publikovane ${formatTime(market.updatedAt)}`}
+            </span>
           </div>
         </div>
       ) : null}

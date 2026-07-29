@@ -1035,6 +1035,9 @@ export default function App() {
   const [isWeatherLoading, setIsWeatherLoading] = useState(true);
   const [commodityMarket, setCommodityMarket] = useState<CommodityMarketSnapshot | null>(null);
   const [isCommodityMarketLoading, setIsCommodityMarketLoading] = useState(false);
+  const [isCommodityMarketRefreshing, setIsCommodityMarketRefreshing] = useState(false);
+  const [commodityMarketRefreshedAt, setCommodityMarketRefreshedAt] = useState<string | null>(null);
+  const [isPageVisible, setIsPageVisible] = useState(() => !document.hidden);
   const [wikiSummary, setWikiSummary] = useState<WikiSummary | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
   const [category, setCategory] = useState<Category>('general');
@@ -1068,6 +1071,7 @@ export default function App() {
   const controllerRef = useRef<AbortController | null>(null);
   const weatherControllerRef = useRef<AbortController | null>(null);
   const commodityMarketControllerRef = useRef<AbortController | null>(null);
+  const commodityMarketRef = useRef<CommodityMarketSnapshot | null>(commodityMarket);
   const isLoadingRef = useRef(isLoading);
   const selectedArticleRef = useRef<NewsArticle | null>(selectedArticle);
 
@@ -1224,6 +1228,22 @@ export default function App() {
     setFocusedTopic(null);
   }, [category, searchQuery]);
 
+  useEffect(() => {
+    commodityMarketRef.current = commodityMarket;
+  }, [commodityMarket]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsPageVisible(!document.hidden);
+    };
+
+    handleVisibilityChange();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   const loadData = useCallback(
     async (nextCategory: Category, query: string = '', refresh: boolean = false) => {
       if (controllerRef.current) {
@@ -1319,40 +1339,71 @@ export default function App() {
       });
   }, [feedSettings]);
 
-  useEffect(() => {
-    if (category !== 'business') {
-      if (commodityMarketControllerRef.current) {
-        commodityMarketControllerRef.current.abort();
-      }
-      setIsCommodityMarketLoading(false);
-      return;
-    }
-
+  const loadCommodityMarkets = useCallback(async (refresh: boolean = false) => {
     if (commodityMarketControllerRef.current) {
       commodityMarketControllerRef.current.abort();
     }
 
     const controller = new AbortController();
     commodityMarketControllerRef.current = controller;
-    setIsCommodityMarketLoading(true);
+    const hasExistingMarket = Boolean(commodityMarketRef.current);
 
-    void fetchCommodityMarkets(controller.signal)
-      .then((nextMarket) => {
-        if (!controller.signal.aborted) {
-          setCommodityMarket(nextMarket);
-        }
-      })
-      .catch((error: any) => {
-        if (error?.name !== 'AbortError' && !controller.signal.aborted) {
-          setCommodityMarket(null);
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setIsCommodityMarketLoading(false);
-        }
-      });
-  }, [category]);
+    if (!refresh || !hasExistingMarket) {
+      setIsCommodityMarketLoading(true);
+    } else {
+      setIsCommodityMarketRefreshing(true);
+    }
+
+    try {
+      const nextMarket = await fetchCommodityMarkets(controller.signal);
+      if (!controller.signal.aborted) {
+        setCommodityMarket(nextMarket);
+        setCommodityMarketRefreshedAt(new Date().toISOString());
+      }
+    } catch (error: any) {
+      if (error?.name !== 'AbortError' && !controller.signal.aborted && !refresh) {
+        setCommodityMarket(null);
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setIsCommodityMarketLoading(false);
+        setIsCommodityMarketRefreshing(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (category !== 'business') {
+      if (commodityMarketControllerRef.current) {
+        commodityMarketControllerRef.current.abort();
+      }
+      setIsCommodityMarketLoading(false);
+      setIsCommodityMarketRefreshing(false);
+      return;
+    }
+
+    void loadCommodityMarkets(false);
+  }, [category, loadCommodityMarkets]);
+
+  useEffect(() => {
+    if (category !== 'business' || !isPageVisible) {
+      return;
+    }
+
+    if (commodityMarketRef.current) {
+      void loadCommodityMarkets(true);
+    }
+
+    const interval = setInterval(() => {
+      if (!selectedArticleRef.current) {
+        void loadCommodityMarkets(true);
+      }
+    }, 60_000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [category, isPageVisible, loadCommodityMarkets]);
 
   useEffect(() => {
     selectedArticleRef.current = selectedArticle;
@@ -1915,6 +1966,9 @@ export default function App() {
                 {category === 'business' ? (
                   <CommodityMarketWidget
                     isLoading={isCommodityMarketLoading}
+                    isLive={category === 'business' && isPageVisible}
+                    isRefreshing={isCommodityMarketRefreshing}
+                    lastRefreshedAt={commodityMarketRefreshedAt}
                     market={commodityMarket}
                   />
                 ) : null}
