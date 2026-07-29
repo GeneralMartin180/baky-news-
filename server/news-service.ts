@@ -133,17 +133,9 @@ const BBC_FEEDS: Record<Category, FeedCandidate[]> = {
     { label: "bbc-business", url: "https://feeds.bbci.co.uk/news/business/rss.xml" },
     { label: "bbc-news", url: "https://feeds.bbci.co.uk/news/rss.xml" },
   ],
-  entertainment: [
-    { label: "bbc-entertainment", url: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml" },
-    { label: "bbc-news", url: "https://feeds.bbci.co.uk/news/rss.xml" },
-  ],
   general: [
     { label: "bbc-news", url: "https://feeds.bbci.co.uk/news/rss.xml" },
     { label: "bbc-world", url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
-  ],
-  health: [
-    { label: "bbc-health", url: "https://feeds.bbci.co.uk/news/health/rss.xml" },
-    { label: "bbc-news", url: "https://feeds.bbci.co.uk/news/rss.xml" },
   ],
   science: [
     { label: "bbc-science", url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" },
@@ -165,33 +157,20 @@ const BBC_SEARCH_FEEDS: FeedCandidate[] = [
   ...BBC_FEEDS.business,
   ...BBC_FEEDS.technology,
   ...BBC_FEEDS.science,
-  ...BBC_FEEDS.health,
   ...BBC_FEEDS.sports,
-  ...BBC_FEEDS.entertainment,
 ];
-
 const CATEGORY_PAGE_CONFIG: Record<string, CategoryPageConfig> = {
   science: {
     sourceName: "Aktuality.sk",
     url: "https://www.aktuality.sk/spravy/veda/23/"
-  },
-  health: {
-    sourceName: "Aktuality.sk",
-    url: "https://www.aktuality.sk/zdravie/"
-  },
-  entertainment: {
-    sourceName: "Aktuality.sk",
-    url: "https://www.aktuality.sk/kultura/koktejl/"
   }
 };
 const CATEGORY_LABELS: Record<Category, string> = {
   business: "Biznis",
-  entertainment: "Kultúra a zábava",
-  general: "Hlavné správy",
-  health: "Zdravie",
+  general: "Hlavne spravy",
   science: "Veda",
-  sports: "Šport",
-  technology: "Technológie",
+  sports: "Sport",
+  technology: "Technologie",
 };
 const LOCAL_EDITIONS: Record<
   Exclude<LocalEdition, "all">,
@@ -387,8 +366,6 @@ function getPrewarmRequests(): GetNewsOptions[] {
     { category: "business", language: "sk", region: "SK", localEdition: "all" },
     { category: "sports", language: "sk", region: "SK", localEdition: "all" },
     { category: "science", language: "sk", region: "SK", localEdition: "all" },
-    { category: "entertainment", language: "sk", region: "SK", localEdition: "all" },
-    { category: "health", language: "sk", region: "SK", localEdition: "all" },
     { category: "general", language: "sk", region: "SK", localEdition: "bratislava" },
     { category: "general", language: "sk", region: "SK", localEdition: "kosice" },
     { category: "general", language: "sk", region: "SK", localEdition: "presov" },
@@ -545,13 +522,6 @@ function buildFeedCandidates(
       ];
     case "science":
       return BBC_FEEDS.science;
-    case "entertainment":
-      return [
-        { label: "aktuality-koktejl", url: "https://www.aktuality.sk/rss/koktejl/" },
-        ...BBC_FEEDS.entertainment,
-      ];
-    case "health":
-      return BBC_FEEDS.health;
     case "general":
     default:
       return [

@@ -24,7 +24,7 @@ export interface WikiSummary {
   };
 }
 
-export type Category = 'general' | 'technology' | 'sports' | 'business' | 'science' | 'entertainment' | 'health';
+export type Category = 'general' | 'technology' | 'sports' | 'business' | 'science';
 export type LanguageCode = 'sk' | 'en' | 'cs' | 'de';
 export type RegionCode = 'SK' | 'US' | 'GB' | 'CZ' | 'DE' | 'AT';
 export type AutoRefreshMinutes = 1 | 5 | 15;

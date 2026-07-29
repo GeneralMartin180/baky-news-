@@ -52,9 +52,7 @@ const googleNewsUrlCache = new Map<string, { expiresAt: number; url: string }>()
 
 const CATEGORIES = new Set<Category>([
   "business",
-  "entertainment",
   "general",
-  "health",
   "science",
   "sports",
   "technology",
@@ -111,17 +109,9 @@ const BBC_FEEDS: Record<Category, FeedCandidate[]> = {
     { label: "bbc-business", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/business/rss.xml" },
     { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
   ],
-  entertainment: [
-    { label: "bbc-entertainment", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml" },
-    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
-  ],
   general: [
     { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
     { label: "bbc-world", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
-  ],
-  health: [
-    { label: "bbc-health", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/health/rss.xml" },
-    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
   ],
   science: [
     { label: "bbc-science", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" },
@@ -144,16 +134,10 @@ const SLOVAK_FEEDS: Record<Category, FeedCandidate[]> = {
     { label: "aktuality-business", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/ekonomika/" },
     { label: "startitup-business", sourceName: "Startitup", url: "https://www.startitup.sk/feed/" },
   ],
-  entertainment: [
-    { label: "aktuality-koktejl", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/koktejl/" },
-  ],
   general: [
     { label: "aktuality-general", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/" },
     { label: "startitup-general", sourceName: "Startitup", url: "https://www.startitup.sk/feed/" },
     { label: "eu-featured-news", sourceName: "European Union", url: "https://european-union.europa.eu/node/309/rss_en" },
-  ],
-  health: [
-    { label: "aktuality-health", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/zdravie/" },
   ],
   science: [
     { label: "aktuality-science", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/spravy/veda/23/" },
@@ -168,9 +152,7 @@ const SLOVAK_FEEDS: Record<Category, FeedCandidate[]> = {
 
 const CATEGORY_LABELS: Record<Category, string> = {
   business: "Biznis",
-  entertainment: "Zabava",
   general: "Hlavne spravy",
-  health: "Zdravie",
   science: "Veda",
   sports: "Sport",
   technology: "Technologie",

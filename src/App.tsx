@@ -239,18 +239,6 @@ const categoryMeta: Record<
     description:
       'Výber vedeckých tém, výskumu a poznatkov usporiadaný čitateľne a bez clickbaitu.',
   },
-  entertainment: {
-    kicker: 'Kultúra a zábava',
-    title: 'Popkultúrny výber',
-    description:
-      'Filmy, hudba, streamovanie a spoločenské dianie v čistej editoriálnej podobe.',
-  },
-  health: {
-    kicker: 'Zdravie',
-    title: 'Medicína a prevencia',
-    description:
-      'Zdravotné témy, prevencia a medicínske správy s dôrazom na použiteľný kontext.',
-  },
 };
 
 function readStoredFeedSettings(): FeedSettings {

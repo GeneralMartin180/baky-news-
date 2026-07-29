@@ -1,12 +1,4 @@
-import {
-  BarChart3,
-  Beaker,
-  Cpu,
-  HeartPulse,
-  Newspaper,
-  Trophy,
-  Tv,
-} from 'lucide-react';
+import { BarChart3, Beaker, Cpu, Newspaper, Trophy } from 'lucide-react';
 
 import { Category } from '../types';
 import { cn } from '../lib/utils';
@@ -22,8 +14,6 @@ const categories: Array<{ id: Category; label: string; icon: typeof Newspaper }>
   { id: 'business', label: 'Biznis', icon: BarChart3 },
   { id: 'sports', label: 'Šport', icon: Trophy },
   { id: 'science', label: 'Veda', icon: Beaker },
-  { id: 'entertainment', label: 'Zábava', icon: Tv },
-  { id: 'health', label: 'Zdravie', icon: HeartPulse },
 ];
 
 export function CategoryFilter({
