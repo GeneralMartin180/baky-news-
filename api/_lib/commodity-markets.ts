@@ -1,6 +1,10 @@
 import ExcelJS from "exceljs";
 
-import type { CommodityMarketQuote, CommodityMarketSnapshot } from "../../src/types";
+import type {
+  CommodityMarketPoint,
+  CommodityMarketQuote,
+  CommodityMarketSnapshot,
+} from "../../src/types";
 
 type QuoteDefinition = {
   group: CommodityMarketQuote["group"];
@@ -15,6 +19,7 @@ const SOURCE_LABEL = "World Bank Pink Sheet";
 const FETCH_TIMEOUT_MS = 7000;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const STALE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const HISTORY_POINTS = 6;
 
 const QUOTES: QuoteDefinition[] = [
   {
@@ -228,6 +233,7 @@ function buildColumnMap(sheet: ExcelJS.Worksheet) {
 function buildQuote(
   currentRow: ExcelJS.Row,
   previousRow: ExcelJS.Row,
+  historyRows: ExcelJS.Row[],
   columns: Map<string, { index: number; unit: string }>,
   definition: QuoteDefinition
 ): CommodityMarketQuote | null {
@@ -246,10 +252,26 @@ function buildQuote(
     previousValue && previousValue !== 0
       ? Number((((value - previousValue) / previousValue) * 100).toFixed(1))
       : null;
+  const history = historyRows
+    .map((row) => {
+      const pointValue = readCellNumber(row.getCell(column.index).value);
+      const period = String(row.getCell(1).text || "").trim();
+
+      if (pointValue === null || !period) {
+        return null;
+      }
+
+      return {
+        period: parsePeriod(period),
+        value: Number(pointValue.toFixed(2)),
+      } satisfies CommodityMarketPoint;
+    })
+    .filter((point): point is CommodityMarketPoint => Boolean(point));
 
   return {
     changePercent,
     group: definition.group,
+    history,
     id: definition.id,
     label: definition.label,
     previousValue,
@@ -279,10 +301,11 @@ async function readWorkbookSnapshot() {
 
   const currentRow = sheet.getRow(periodRows[periodRows.length - 1]);
   const previousRow = sheet.getRow(periodRows[periodRows.length - 2]);
+  const historyRows = periodRows.slice(-HISTORY_POINTS).map((rowIndex) => sheet.getRow(rowIndex));
   const latestPeriod = String(currentRow.getCell(1).text || "").trim();
   const columns = buildColumnMap(sheet);
   const quotes = QUOTES.map((definition) =>
-    buildQuote(currentRow, previousRow, columns, definition)
+    buildQuote(currentRow, previousRow, historyRows, columns, definition)
   ).filter((quote): quote is CommodityMarketQuote => Boolean(quote));
 
   if (!quotes.length) {

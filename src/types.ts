@@ -74,9 +74,15 @@ export interface WeatherSnapshot {
 export type CommodityMarketGroup = 'energy' | 'oils' | 'food';
 export type CommodityMarketTrend = 'up' | 'down' | 'flat';
 
+export interface CommodityMarketPoint {
+  period: string;
+  value: number;
+}
+
 export interface CommodityMarketQuote {
   changePercent: number | null;
   group: CommodityMarketGroup;
+  history: CommodityMarketPoint[];
   id: string;
   label: string;
   previousValue: number | null;
