@@ -44,7 +44,7 @@ type NormalizeImageOptions = {
 };
 
 const ARTICLE_IMAGE_CACHE_MS = 60 * 60 * 1000;
-const ARTICLE_IMAGE_ENRICHMENT_LIMIT = 16;
+const ARTICLE_IMAGE_ENRICHMENT_LIMIT = 24;
 const ARTICLE_IMAGE_TIMEOUT_MS = 3000;
 const GOOGLE_NEWS_DECODE_CACHE_MS = 60 * 60 * 1000;
 const articleImageCache = new Map<string, { expiresAt: number; imageUrl: string }>();
@@ -1085,8 +1085,7 @@ async function fetchArticles(
   const filtered = filterArticlesByQuery(dedupeArticles(fetchedArticles), query);
   const ranked = rankArticles(filtered, localEdition, query, locationQuery).slice(0, 36);
   const merged = dedupeArticles([...locationArticles, ...ranked]).slice(0, 36);
-  const articles =
-    category === "general" && !query ? await enrichArticleImages(merged) : merged;
+  const articles = !query ? await enrichArticleImages(merged) : merged;
   return {
     articles,
     sourceMode,
