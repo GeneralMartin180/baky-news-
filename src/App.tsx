@@ -1626,7 +1626,7 @@ export default function App() {
     digestMode !== 'feed' || activeWatchlistIds.length > 0 || searchQuery.length > 0;
 
   return (
-    <div className="min-h-screen bg-[#f4f5f7] text-slate-950">
+    <div className="min-h-screen overflow-x-clip bg-[#f4f5f7] text-slate-950">
       <header className="news-glass z-50 border-b border-slate-200/75 pt-[env(safe-area-inset-top)] sm:sticky sm:top-0">
         <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-2.5 px-3 py-2.5 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
           <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none sm:items-start sm:gap-4">
@@ -1771,8 +1771,8 @@ export default function App() {
           </div>
         ) : activeArticles.length > 0 || feedView === 'saved' ? (
           <>
-            <section className="grid gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-6 2xl:grid-cols-[minmax(0,1fr)_340px] 2xl:gap-8">
-              <div className="space-y-3 sm:space-y-6">
+            <section className="grid min-w-0 gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-6 2xl:grid-cols-[minmax(0,1fr)_340px] 2xl:gap-8">
+              <div className="min-w-0 space-y-3 sm:space-y-6">
                 <div className="flex flex-col gap-2 border-b border-slate-200/80 pb-3 sm:gap-3 sm:pb-4 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
                     <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-sky-700 sm:text-xs sm:tracking-[0.18em]">
@@ -2187,7 +2187,7 @@ export default function App() {
               {wikiSummary ? <WikiCard summary={wikiSummary} /> : null}
             </AnimatePresence>
 
-            <section className="space-y-3 lg:hidden">
+            <section className="min-w-0 space-y-3 lg:hidden">
               <div className="flex items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
                 <div>
                   <p className="hidden text-xs font-medium uppercase tracking-[0.16em] text-slate-500 sm:block">

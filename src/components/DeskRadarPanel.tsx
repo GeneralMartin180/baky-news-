@@ -38,7 +38,7 @@ export function DeskRadarPanel({
   sourceFilter,
 }: DeskRadarPanelProps) {
   return (
-    <section className="news-card-shadow rounded-lg border border-slate-200/80 bg-white p-3 sm:p-4">
+    <section className="news-card-shadow min-w-0 rounded-lg border border-slate-200/80 bg-white p-3 sm:p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500 sm:text-xs">
@@ -49,7 +49,7 @@ export function DeskRadarPanel({
         <Radar className="mt-1 h-4 w-4 text-sky-700" />
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex min-w-0 flex-wrap gap-2">
         {digestModes.map((mode) => (
           <button
             key={mode}
@@ -73,7 +73,7 @@ export function DeskRadarPanel({
             <ShieldCheck className="h-3.5 w-3.5" />
             Source layer
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 flex min-w-0 flex-wrap gap-2">
             {sourceFilters.map((filter) => (
               <button
                 key={filter}
@@ -97,7 +97,7 @@ export function DeskRadarPanel({
             <Filter className="h-3.5 w-3.5" />
             Read depth
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 flex min-w-0 flex-wrap gap-2">
             {readTimeFilters.map((filter) => (
               <button
                 key={filter}
@@ -118,7 +118,7 @@ export function DeskRadarPanel({
       </div>
 
       {focusedTopic ? (
-        <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-sky-100 bg-sky-50 px-3 py-2">
+        <div className="mt-3 flex min-w-0 items-center justify-between gap-2 rounded-lg border border-sky-100 bg-sky-50 px-3 py-2">
           <div className="min-w-0">
             <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700">
               Topic focus

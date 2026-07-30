@@ -20,11 +20,11 @@ export function DeskSavedSearchesPanel({
   const canSave = currentValue.trim().length > 0;
 
   return (
-    <section className="news-soft-shadow rounded-lg border border-slate-200/80 bg-white/85 p-3 sm:p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+    <section className="news-soft-shadow min-w-0 rounded-lg border border-slate-200/80 bg-white/85 p-3 sm:p-4">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
           <History className="h-4 w-4 text-slate-400" />
-          <span className="text-sm font-medium text-slate-700">Saved searches</span>
+          <span className="truncate text-sm font-medium text-slate-700">Saved searches</span>
         </div>
 
         <button
@@ -44,19 +44,19 @@ export function DeskSavedSearchesPanel({
       </div>
 
       {savedSearches.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex min-w-0 flex-wrap gap-2">
           {savedSearches.map((query) => (
             <div
               key={query}
-              className="inline-flex items-center gap-1 rounded-full border border-slate-200/80 bg-slate-50 pl-2.5 pr-1 py-1"
+              className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-slate-200/80 bg-slate-50 py-1 pl-2.5 pr-1"
             >
               <button
                 type="button"
                 onClick={() => onRunSearch(query)}
-                className="inline-flex items-center gap-1 text-sm font-medium text-slate-700"
+                className="inline-flex min-w-0 items-center gap-1 text-sm font-medium text-slate-700"
               >
                 <Search className="h-3.5 w-3.5 text-slate-400" />
-                {query}
+                <span className="truncate">{query}</span>
               </button>
               <button
                 type="button"
