@@ -18,6 +18,7 @@ import {
 import { WeatherSnapshot } from '../types';
 
 interface WeatherWidgetProps {
+  compact?: boolean;
   isLoading: boolean;
   weather: WeatherSnapshot | null;
 }
@@ -138,11 +139,48 @@ function WeatherMetric({
   );
 }
 
-export function WeatherWidget({ isLoading, weather }: WeatherWidgetProps) {
+export function WeatherWidget({ compact = false, isLoading, weather }: WeatherWidgetProps) {
   const presentation = weather
     ? getWeatherPresentation(weather.weatherCode, weather.isDay)
     : null;
   const Icon = presentation?.icon ?? CloudSun;
+
+  if (compact) {
+    return (
+      <section
+        className={`news-card-shadow overflow-hidden rounded-lg border border-white/20 bg-gradient-to-br ${
+          presentation?.gradientClass ?? 'from-sky-500 via-sky-400 to-cyan-300'
+        }`}
+      >
+        <div className="relative flex min-h-[68px] items-center gap-3 px-3 py-2.5 text-white">
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.02)_55%,rgba(15,23,42,0.12)_100%)]" />
+          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/14 backdrop-blur-md">
+            <Icon className={`h-5 w-5 ${presentation?.accentClass ?? 'text-sky-100'}`} />
+          </div>
+
+          <div className="relative min-w-0 flex-1">
+            <p className="truncate text-[10px] font-medium uppercase tracking-[0.12em] text-white/72">
+              {weather?.locationLabel ?? 'Miestne počasie'}
+            </p>
+            <p className="mt-0.5 truncate text-xs font-medium text-white">
+              {isLoading || !weather
+                ? 'Načítavam počasie'
+                : `${presentation?.label} · Pocitovo ${weather.apparentTemperatureC}°`}
+            </p>
+          </div>
+
+          <div className="relative shrink-0 text-right">
+            <div className="text-[28px] font-semibold leading-none">
+              {weather ? `${weather.temperatureC}°` : '--°'}
+            </div>
+            <div className="mt-1 text-[10px] text-white/72">
+              {weather ? `${weather.highC}° / ${weather.lowC}°` : 'dnes'}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section

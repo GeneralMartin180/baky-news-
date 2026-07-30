@@ -580,7 +580,7 @@ function FeedLeadStory({ article, insight, onSelect }: FeedLeadStoryProps) {
       onClick={() => onSelect(article)}
       className="group news-card-shadow news-pressable grid w-full overflow-hidden rounded-[14px] border border-slate-200/80 bg-white text-left sm:rounded-lg lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.95fr)]"
     >
-      <div className="relative min-h-[118px] overflow-hidden bg-slate-100 sm:min-h-[280px] lg:min-h-[440px]">
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-100 sm:min-h-[280px] lg:aspect-auto lg:min-h-[440px]">
         {showImage ? (
           <img
             src={article.urlToImage}
@@ -871,7 +871,7 @@ interface FeedViewTabsProps {
 function FeedViewTabs({ activeView, onViewChange, savedCount }: FeedViewTabsProps) {
   return (
     <div
-      className="no-scrollbar flex gap-2 overflow-x-auto rounded-lg border border-slate-200/80 bg-white/80 p-1"
+      className="no-scrollbar flex gap-1 overflow-x-auto rounded-lg border border-slate-200/80 bg-white/80 p-1 sm:gap-2"
       role="tablist"
       aria-label="Výber feedu"
     >
@@ -887,7 +887,7 @@ function FeedViewTabs({ activeView, onViewChange, savedCount }: FeedViewTabsProp
             aria-selected={isActive}
             onClick={() => onViewChange(option.id)}
             className={cn(
-              'news-pressable inline-flex h-10 shrink-0 items-center gap-2 rounded-md px-3.5 text-sm font-medium',
+              'news-pressable inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium sm:h-10 sm:gap-2 sm:px-3.5 sm:text-sm',
               isActive
                 ? 'bg-slate-950 text-white shadow-[0_12px_24px_-20px_rgba(15,23,42,0.9)]'
                 : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
@@ -1601,6 +1601,8 @@ export default function App() {
   const briefingArticles =
     digestMode === 'briefing' ? visibleArticles.slice(0, 5) : visibleArticles.slice(1, 5);
   const gridArticles = visibleArticles.slice(5);
+  const mobileGridArticles =
+    digestMode === 'briefing' ? gridArticles : visibleArticles.slice(1);
   const remainingArticles = Math.max(activeArticles.length - visibleArticlesCount, 0);
   const relatedArticlePool =
     activeArticles.length > 1 ? activeArticles : deskFilteredArticles;
@@ -1626,15 +1628,15 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#f4f5f7] text-slate-950">
       <header className="news-glass z-50 border-b border-slate-200/75 pt-[env(safe-area-inset-top)] sm:sticky sm:top-0">
-        <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-3 px-3 py-3 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
-          <div className="flex min-w-0 flex-1 items-start gap-3 sm:flex-none sm:gap-4">
-            <Logo className="h-10 w-10 shrink-0 sm:h-14 sm:w-14" />
-            <div className="min-w-0 pt-1 sm:pt-1.5 lg:pt-2">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-2.5 px-3 py-2.5 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none sm:items-start sm:gap-4">
+            <Logo className="h-9 w-9 shrink-0 sm:h-14 sm:w-14" />
+            <div className="min-w-0 sm:pt-1.5 lg:pt-2">
               <div className="flex items-center gap-2">
                 <img
                   src="/baky-news-wordmark.svg"
                   alt="Baky News"
-                  className="h-8 w-auto max-w-[190px] shrink-0 object-contain sm:h-[3.1rem] sm:max-w-[270px] lg:h-[3.25rem] lg:max-w-[290px]"
+                  className="h-7 w-auto max-w-[165px] shrink-0 object-contain sm:h-[3.1rem] sm:max-w-[270px] lg:h-[3.25rem] lg:max-w-[290px]"
                 />
                 <span className="news-soft-shadow hidden rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 sm:inline-flex">
                   Live
@@ -1699,8 +1701,8 @@ export default function App() {
 
           {feedSettings.useLocation && feedSettings.location?.label ? (
             <div className="order-4 basis-full sm:hidden">
-              <div className="news-soft-shadow inline-flex max-w-full items-center gap-2 rounded-full border border-sky-100 bg-sky-50/90 px-3 py-2 text-sm text-sky-800">
-                <MapPinned className="h-4 w-4 shrink-0" />
+              <div className="news-soft-shadow inline-flex max-w-full items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50/90 px-2.5 py-1.5 text-xs text-sky-800">
+                <MapPinned className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{feedSettings.location.label}</span>
                 {category === 'general' && weather ? (
                   <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-700">
@@ -1769,7 +1771,7 @@ export default function App() {
           </div>
         ) : activeArticles.length > 0 || feedView === 'saved' ? (
           <>
-            <section className="grid gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-8 2xl:grid-cols-[minmax(0,1fr)_340px]">
+            <section className="grid gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-6 2xl:grid-cols-[minmax(0,1fr)_340px] 2xl:gap-8">
               <div className="space-y-3 sm:space-y-6">
                 <div className="flex flex-col gap-2 border-b border-slate-200/80 pb-3 sm:gap-3 sm:pb-4 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
@@ -1810,27 +1812,33 @@ export default function App() {
                   </div>
                 </div>
 
-                <DeskSavedSearchesPanel
-                  currentValue={searchInput || searchQuery}
-                  onRemoveSearch={handleRemoveSavedSearch}
-                  onRunSearch={handleRunSavedSearch}
-                  onSaveCurrent={handleSaveCurrentSearch}
-                  savedSearches={savedSearches}
-                />
+                <div className="hidden sm:block">
+                  <DeskSavedSearchesPanel
+                    currentValue={searchInput || searchQuery}
+                    onRemoveSearch={handleRemoveSavedSearch}
+                    onRunSearch={handleRunSavedSearch}
+                    onSaveCurrent={handleSaveCurrentSearch}
+                    savedSearches={savedSearches}
+                  />
+                </div>
 
                 {shouldShowExecutiveBrief ? (
-                  <ExecutiveBriefingPanel
-                    brief={executiveBrief}
-                    digestMode={digestMode}
-                  />
+                  <div className="hidden sm:block">
+                    <ExecutiveBriefingPanel
+                      brief={executiveBrief}
+                      digestMode={digestMode}
+                    />
+                  </div>
                 ) : null}
 
-                <DeskWatchlistPanel
-                  activeIds={activeWatchlistIds}
-                  counts={watchlistCounts}
-                  onToggle={handleToggleWatchlist}
-                  watchlists={DESK_WATCHLISTS}
-                />
+                <div className="hidden sm:block">
+                  <DeskWatchlistPanel
+                    activeIds={activeWatchlistIds}
+                    counts={watchlistCounts}
+                    onToggle={handleToggleWatchlist}
+                    watchlists={DESK_WATCHLISTS}
+                  />
+                </div>
 
                 <FeedViewTabs
                   activeView={feedView}
@@ -1838,11 +1846,106 @@ export default function App() {
                   savedCount={savedArticleCount}
                 />
 
+                <details className="group news-soft-shadow overflow-hidden rounded-lg border border-slate-200/80 bg-white sm:hidden">
+                  <summary className="flex h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-medium text-slate-800 [&::-webkit-details-marker]:hidden">
+                    <span className="inline-flex items-center gap-2">
+                      <Settings2 className="h-4 w-4 text-sky-700" />
+                      Feed a filtre
+                    </span>
+                    <span className="text-xs font-normal text-slate-500 group-open:hidden">
+                      Otvoriť
+                    </span>
+                    <span className="hidden text-xs font-normal text-slate-500 group-open:inline">
+                      Zavrieť
+                    </span>
+                  </summary>
+
+                  <div className="space-y-2 border-t border-slate-200/80 bg-slate-50/55 p-2">
+                    <div className="flex items-center justify-between rounded-lg border border-slate-200/80 bg-white px-3 py-2.5">
+                      <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-800">
+                        <ShieldCheck className="h-4 w-4 text-sky-700" />
+                        Signal
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSignalMode((value) => !value)}
+                        className={cn(
+                          'news-pressable inline-flex h-6 w-10 shrink-0 items-center rounded-full border transition-colors',
+                          signalMode
+                            ? 'border-slate-900 bg-slate-900'
+                            : 'border-slate-300 bg-slate-200'
+                        )}
+                        aria-pressed={signalMode}
+                        aria-label="Signal Mode"
+                      >
+                        <span
+                          className={cn(
+                            'mx-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform',
+                            signalMode && 'translate-x-4'
+                          )}
+                        />
+                      </button>
+                    </div>
+
+                    <DeskRadarPanel
+                      digestMode={digestMode}
+                      focusedTopic={focusedTopic}
+                      onClearTopic={() => setFocusedTopic(null)}
+                      onDigestModeChange={setDigestMode}
+                      onReadTimeFilterChange={setReadTimeFilter}
+                      onSourceFilterChange={setSourceFilter}
+                      onTopicSelect={handleFocusTopic}
+                      radar={radarSnapshot}
+                      readTimeFilter={readTimeFilter}
+                      sourceFilter={sourceFilter}
+                    />
+
+                    <DeskWatchlistPanel
+                      activeIds={activeWatchlistIds}
+                      counts={watchlistCounts}
+                      onToggle={handleToggleWatchlist}
+                      watchlists={DESK_WATCHLISTS}
+                    />
+
+                    <DeskSavedSearchesPanel
+                      currentValue={searchInput || searchQuery}
+                      onRemoveSearch={handleRemoveSavedSearch}
+                      onRunSearch={handleRunSavedSearch}
+                      onSaveCurrent={handleSaveCurrentSearch}
+                      savedSearches={savedSearches}
+                    />
+                  </div>
+                </details>
+
+                {category === 'general' ? (
+                  <div className="lg:hidden">
+                    <WeatherWidget
+                      compact
+                      isLoading={isWeatherLoading}
+                      weather={weather}
+                    />
+                  </div>
+                ) : null}
+
+                {category === 'business' ? (
+                  <div className="lg:hidden">
+                    <CommodityMarketWidget
+                      isLoading={isCommodityMarketLoading}
+                      isLive={category === 'business' && isPageVisible}
+                      isRefreshing={isCommodityMarketRefreshing}
+                      lastRefreshedAt={commodityMarketRefreshedAt}
+                      market={commodityMarket}
+                    />
+                  </div>
+                ) : null}
+
                 {feedView !== 'saved' && editorial ? (
-                  <EditorialPanel
-                    briefing={editorial}
-                    localEdition={localEditionSummary}
-                  />
+                  <div className="hidden sm:block">
+                    <EditorialPanel
+                      briefing={editorial}
+                      localEdition={localEditionSummary}
+                    />
+                  </div>
                 ) : null}
 
                 {digestMode === 'briefing' && briefingArticles.length > 0 ? (
@@ -1878,7 +1981,7 @@ export default function App() {
                   />
                 ) : null}
 
-                <div className="hidden xl:block">
+                <div className="hidden lg:block">
                   <section className="space-y-5">
                     <div className="flex flex-col gap-3 border-b border-slate-200/80 pb-4">
                       <div>
@@ -1937,7 +2040,7 @@ export default function App() {
                 </div>
               </div>
 
-              <aside className="space-y-3 sm:space-y-5">
+              <aside className="hidden space-y-3 sm:space-y-5 lg:block">
                 <DeskRadarPanel
                   digestMode={digestMode}
                   focusedTopic={focusedTopic}
@@ -2084,19 +2187,20 @@ export default function App() {
               {wikiSummary ? <WikiCard summary={wikiSummary} /> : null}
             </AnimatePresence>
 
-            <section className="space-y-5 xl:hidden">
-              <div className="flex flex-col gap-3 border-b border-slate-200/80 pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <section className="space-y-3 lg:hidden">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                  <p className="hidden text-xs font-medium uppercase tracking-[0.16em] text-slate-500 sm:block">
                     Pokračovanie feedu
                   </p>
-                  <h3 className="mt-2 text-xl font-semibold text-slate-950 sm:text-2xl">
+                  <h3 className="text-lg font-semibold text-slate-950 sm:mt-2 sm:text-2xl">
                     Ďalšie správy
                   </h3>
                 </div>
-                <span className="inline-flex items-center gap-2 text-sm text-slate-500">
+                <span className="inline-flex items-center gap-2 text-xs text-slate-500 sm:text-sm">
                   <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                  Overené zdroje a pokojný produktový prehľad
+                  <span className="hidden sm:inline">Overené zdroje a pokojný produktový prehľad</span>
+                  <span className="sm:hidden">Overené zdroje</span>
                 </span>
               </div>
 
@@ -2105,9 +2209,9 @@ export default function App() {
                   Zatiaľ tu nie sú uložené články. Otvor článok a použi tlačidlo Uložiť,
                   potom sa ti tu zobrazí súkromný zoznam na čítanie neskôr.
                 </div>
-              ) : gridArticles.length > 0 ? (
-                <div className="grid gap-3.5 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
-                  {gridArticles.map((article, index) => (
+              ) : mobileGridArticles.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3">
+                  {mobileGridArticles.map((article, index) => (
                     <div key={article.url}>
                       <NewsCard
                         article={article}
@@ -2126,7 +2230,7 @@ export default function App() {
             </section>
 
             {remainingArticles > 0 ? (
-              <div className="flex justify-center pt-2 xl:hidden">
+              <div className="flex justify-center pt-2 lg:hidden">
                 <button
                   type="button"
                   id="load-more-btn"

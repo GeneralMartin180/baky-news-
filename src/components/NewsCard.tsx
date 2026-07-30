@@ -52,9 +52,9 @@ export function NewsCard({ article, index, insight, onSelect }: NewsCardProps) {
       type="button"
       onClick={() => onSelect?.(article)}
       style={{ transitionDelay: `${Math.min(index, 5) * 14}ms` }}
-      className="group news-card-shadow news-pressable grid h-full w-full grid-cols-[92px_minmax(0,1fr)] overflow-hidden rounded-lg border border-slate-200/80 bg-white text-left sm:flex sm:flex-col"
+      className="group news-card-shadow news-pressable flex h-full w-full flex-col overflow-hidden rounded-lg border border-slate-200/80 bg-white text-left"
     >
-      <div className="relative h-full min-h-[92px] overflow-hidden bg-slate-100 sm:min-h-0 sm:aspect-[4/3]">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
         {showImage ? (
           <img
             src={article.urlToImage}
@@ -65,35 +65,35 @@ export function NewsCard({ article, index, insight, onSelect }: NewsCardProps) {
           />
         ) : (
           <div className="flex h-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 text-slate-400">
-            <PlaceholderIcon className="h-8 w-8 sm:h-10 sm:w-10" strokeWidth={1.5} />
+            <PlaceholderIcon className="h-8 w-8 md:h-10 md:w-10" strokeWidth={1.5} />
           </div>
         )}
 
         <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/22 via-slate-950/6 to-transparent" />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col p-2.5 sm:p-5">
+      <div className="flex min-w-0 flex-1 flex-col p-2 sm:p-3 lg:p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500 sm:text-[11px] sm:tracking-[0.14em]">
+          <span className="text-[9px] font-medium uppercase tracking-[0.1em] text-slate-500 md:text-[11px] md:tracking-[0.14em]">
             {dateLabel}
           </span>
         </div>
 
         {insight ? (
-          <div className="mt-1.5">
+          <div className="mt-1 hidden md:block">
             <ArticleInsightChips compact insight={insight} />
           </div>
         ) : null}
 
-        <h3 className="mt-1.5 line-clamp-2 text-[13px] font-semibold leading-5 text-slate-950 sm:mt-3 sm:line-clamp-3 sm:text-[21px] sm:leading-8">
+        <h3 className="mt-1 line-clamp-3 text-[12px] font-semibold leading-[1.35] text-slate-950 sm:text-[15px] sm:leading-5 lg:mt-2 lg:text-[18px] lg:leading-6">
           {article.title}
         </h3>
 
-        <p className="mt-1 line-clamp-1 flex-1 text-xs leading-4 text-slate-600 sm:mt-3 sm:line-clamp-4 sm:text-sm sm:leading-7">
+        <p className="mt-2 hidden flex-1 text-[13px] leading-5 text-slate-600 md:line-clamp-3">
           {article.description}
         </p>
 
-        <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-xs sm:mt-5 sm:pt-4 sm:text-sm">
+        <div className="mt-4 hidden items-center justify-between border-t border-slate-100 pt-3 text-sm lg:flex">
           <span className="font-medium text-slate-900">Čítať viac</span>
           <ExternalLink className="h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
         </div>

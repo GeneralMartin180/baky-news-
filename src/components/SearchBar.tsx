@@ -26,7 +26,7 @@ export function SearchBar({
 
   return (
     <form onSubmit={handleSubmit} className="relative">
-      <div className="news-card-shadow flex h-12 items-center rounded-full border border-slate-200/80 bg-white px-2 pl-3 transition-[border-color,box-shadow] duration-200 focus-within:border-slate-300 focus-within:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_18px_36px_-28px_rgba(15,23,42,0.22)] sm:h-[52px] sm:pl-4">
+      <div className="news-card-shadow flex h-10 items-center rounded-full border border-slate-200/80 bg-white px-1.5 pl-3 transition-[border-color,box-shadow] duration-200 focus-within:border-slate-300 focus-within:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_18px_36px_-28px_rgba(15,23,42,0.22)] sm:h-[52px] sm:px-2 sm:pl-4">
         <div className="text-slate-400">
           <Search className="h-4 w-4" />
         </div>
@@ -62,7 +62,7 @@ export function SearchBar({
           <button
             type="submit"
             disabled={isLoading || !value.trim()}
-            className="news-pressable group inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-[0_10px_22px_-18px_rgba(15,23,42,0.9)] hover:bg-slate-800 disabled:cursor-not-allowed disabled:scale-100 disabled:bg-slate-300 disabled:shadow-none sm:h-10 sm:w-10"
+            className="news-pressable group inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-[0_10px_22px_-18px_rgba(15,23,42,0.9)] hover:bg-slate-800 disabled:cursor-not-allowed disabled:scale-100 disabled:bg-slate-300 disabled:shadow-none sm:h-10 sm:w-10"
             aria-label="Hľadať"
             title="Hľadať"
           >
