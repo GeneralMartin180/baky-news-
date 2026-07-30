@@ -585,7 +585,7 @@ function FeedLeadStory({ article, insight, onSelect }: FeedLeadStoryProps) {
           <img
             src={article.urlToImage}
             alt={article.title}
-            className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 ease-out group-hover:scale-[1.025] sm:object-cover"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]"
             referrerPolicy="no-referrer"
             onError={() => setImageFailed(true)}
           />
@@ -660,7 +660,7 @@ function BriefingItem({ article, onSelect }: BriefingItemProps) {
           <img
             src={article.urlToImage}
             alt={article.title}
-            className="h-full w-full object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03] sm:object-cover"
+            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
             referrerPolicy="no-referrer"
             onError={() => setImageFailed(true)}
           />
