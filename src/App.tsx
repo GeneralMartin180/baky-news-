@@ -1715,7 +1715,7 @@ export default function App() {
         </div>
 
         <div className="border-t border-slate-200/75 bg-white/72">
-          <div className="no-scrollbar mx-auto flex w-full max-w-[1600px] items-center gap-2 overflow-x-auto px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3 lg:px-8">
+          <div className="mx-auto flex w-full max-w-[1600px] items-start gap-2 px-3 py-2.5 sm:no-scrollbar sm:items-center sm:gap-3 sm:overflow-x-auto sm:px-6 sm:py-3 lg:px-8">
             <button
               type="button"
               onClick={() => {
