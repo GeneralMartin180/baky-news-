@@ -59,7 +59,7 @@ export function NewsCard({ article, index, insight, onSelect }: NewsCardProps) {
           <img
             src={article.urlToImage}
             alt={article.title}
-            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+            className="h-full w-full object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03] sm:object-cover"
             referrerPolicy="no-referrer"
             onError={() => setImageFailed(true)}
           />

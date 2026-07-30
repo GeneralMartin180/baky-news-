@@ -458,7 +458,7 @@ export function ArticleModal({
                 <img
                   src={article.urlToImage}
                   alt={article.title}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain sm:object-cover"
                   referrerPolicy="no-referrer"
                   onError={() => setImageFailed(true)}
                 />
