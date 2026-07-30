@@ -1702,7 +1702,7 @@ export default function App() {
               <div className="news-soft-shadow inline-flex max-w-full items-center gap-2 rounded-full border border-sky-100 bg-sky-50/90 px-3 py-2 text-sm text-sky-800">
                 <MapPinned className="h-4 w-4 shrink-0" />
                 <span className="truncate">{feedSettings.location.label}</span>
-                {weather ? (
+                {category === 'general' && weather ? (
                   <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-700">
                     {weather.temperatureC}°
                   </span>
@@ -1961,10 +1961,12 @@ export default function App() {
                   />
                 ) : null}
 
-                <WeatherWidget
-                  isLoading={isWeatherLoading}
-                  weather={weather}
-                />
+                {category === 'general' ? (
+                  <WeatherWidget
+                    isLoading={isWeatherLoading}
+                    weather={weather}
+                  />
+                ) : null}
 
                 <HabitPanel
                   activeView={feedView}
