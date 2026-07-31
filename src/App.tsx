@@ -6,7 +6,6 @@ import {
   Bookmark,
   Clock3,
   Home,
-  LayoutGrid,
   MapPinned,
   Navigation,
   Newspaper,
@@ -14,6 +13,7 @@ import {
   Search,
   Settings2,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   Target,
   Zap,
@@ -558,6 +558,32 @@ function formatLongDate(value: string) {
     day: 'numeric',
     year: 'numeric',
   });
+}
+
+function shortenLocationLabel(value?: string | null) {
+  if (!value) {
+    return '';
+  }
+
+  const [primaryPart] = value.split(',');
+  const normalized = primaryPart
+    .replace(/^okres\s+/i, '')
+    .replace(/^mesto\s+/i, '')
+    .replace(/^obec\s+/i, '')
+    .trim();
+
+  return normalized || primaryPart.trim() || value.trim();
+}
+
+function toCompactLocalEditionSummary(summary: LocalEditionSummary | null) {
+  if (!summary) {
+    return null;
+  }
+
+  return {
+    ...summary,
+    label: shortenLocationLabel(summary.label),
+  };
 }
 
 interface FeedLeadStoryProps {
@@ -1271,7 +1297,7 @@ export default function App() {
 
         setArticles(applyBreakingNewsOverrides(newsData.articles, nextCategory, query));
         setEditorial(newsData.editorial);
-        setLocalEditionSummary(newsData.localEdition);
+        setLocalEditionSummary(toCompactLocalEditionSummary(newsData.localEdition));
         setLastUpdated(new Date());
         setIsLoading(false);
 
@@ -1617,8 +1643,19 @@ export default function App() {
     ? getInsightForArticle(selectedArticle)
     : null;
   const feedMeta = buildActiveFeedMeta(category, searchQuery, feedView);
+  const compactLocationLabel = shortenLocationLabel(feedSettings.location?.label);
+  const displayWeather = useMemo(
+    () =>
+      weather
+        ? {
+            ...weather,
+            locationLabel: shortenLocationLabel(weather.locationLabel),
+          }
+        : null,
+    [weather]
+  );
   const settingsLabel = feedSettings.useLocation && feedSettings.location?.label
-    ? `${feedSettings.language.toUpperCase()} / ${feedSettings.location.label}`
+    ? `${feedSettings.language.toUpperCase()} / ${compactLocationLabel}`
     : `${feedSettings.language.toUpperCase()} / ${feedSettings.region}`;
   const shouldShowLocationSetup =
     !feedSettings.useLocation && !searchQuery && category === 'general';
@@ -1703,10 +1740,10 @@ export default function App() {
             <div className="order-4 basis-full sm:hidden">
               <div className="news-soft-shadow inline-flex max-w-full items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50/90 px-2.5 py-1.5 text-xs text-sky-800">
                 <MapPinned className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{feedSettings.location.label}</span>
-                {category === 'general' && weather ? (
+                <span className="truncate">{compactLocationLabel}</span>
+                {category === 'general' && displayWeather ? (
                   <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-700">
-                    {weather.temperatureC}°
+                    {displayWeather.temperatureC}°
                   </span>
                 ) : null}
               </div>
@@ -1775,15 +1812,9 @@ export default function App() {
               <div className="min-w-0 space-y-3 sm:space-y-6">
                 <div className="flex flex-col gap-2 border-b border-slate-200/80 pb-3 sm:gap-3 sm:pb-4 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
-                    <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-sky-700 sm:text-xs sm:tracking-[0.18em]">
-                      {feedMeta.kicker}
-                    </p>
-                    <h2 className="mt-1 max-w-4xl font-display text-[22px] leading-tight text-slate-950 sm:mt-2 sm:text-4xl lg:text-[2.65rem]">
+                    <h2 className="max-w-4xl font-display text-[22px] leading-tight text-slate-950 sm:text-4xl lg:text-[2.65rem]">
                       {feedMeta.title}
                     </h2>
-                    <p className="mt-1 line-clamp-1 text-[12px] leading-5 text-slate-500 sm:max-w-2xl sm:text-sm sm:leading-5">
-                      {feedMeta.description}
-                    </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 text-[11px] sm:gap-2 sm:text-xs">
@@ -1800,15 +1831,11 @@ export default function App() {
                       {settingsLabel}
                     </span>
                     {localEditionSummary ? (
-                      <span className="news-soft-shadow inline-flex items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50 px-2.5 py-1 text-sky-700 sm:gap-2 sm:px-3 sm:py-1.5">
+                      <span className="news-soft-shadow hidden items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50 px-2.5 py-1 text-sky-700 sm:inline-flex sm:gap-2 sm:px-3 sm:py-1.5">
                         <MapPinned className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         {localEditionSummary.label}
                       </span>
                     ) : null}
-                    <span className="news-soft-shadow inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-2.5 py-1 text-slate-600 sm:gap-2 sm:px-3 sm:py-1.5">
-                      <LayoutGrid className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                      {activeArticles.length} článkov
-                    </span>
                   </div>
                 </div>
 
@@ -1840,27 +1867,21 @@ export default function App() {
                   />
                 </div>
 
-                <FeedViewTabs
-                  activeView={feedView}
-                  onViewChange={setFeedView}
-                  savedCount={savedArticleCount}
-                />
+                <div className="flex items-start gap-2 sm:block">
+                  <div className="min-w-0 flex-1">
+                    <FeedViewTabs
+                      activeView={feedView}
+                      onViewChange={setFeedView}
+                      savedCount={savedArticleCount}
+                    />
+                  </div>
 
-                <details className="group news-soft-shadow overflow-hidden rounded-lg border border-slate-200/80 bg-white sm:hidden">
-                  <summary className="flex h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-medium text-slate-800 [&::-webkit-details-marker]:hidden">
-                    <span className="inline-flex items-center gap-2">
-                      <Settings2 className="h-4 w-4 text-sky-700" />
-                      Feed a filtre
-                    </span>
-                    <span className="text-xs font-normal text-slate-500 group-open:hidden">
-                      Otvoriť
-                    </span>
-                    <span className="hidden text-xs font-normal text-slate-500 group-open:inline">
-                      Zavrieť
-                    </span>
-                  </summary>
+                  <details className="group relative shrink-0 sm:hidden">
+                    <summary className="news-card-shadow flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 [&::-webkit-details-marker]:hidden">
+                      <SlidersHorizontal className="h-4 w-4" />
+                    </summary>
 
-                  <div className="space-y-2 border-t border-slate-200/80 bg-slate-50/55 p-2">
+                    <div className="news-card-shadow absolute right-0 z-20 mt-2 w-[min(20rem,calc(100vw-1.5rem))] space-y-2 rounded-lg border border-slate-200/80 bg-slate-50/95 p-2 backdrop-blur">
                     <div className="flex items-center justify-between rounded-lg border border-slate-200/80 bg-white px-3 py-2.5">
                       <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-800">
                         <ShieldCheck className="h-4 w-4 text-sky-700" />
@@ -1914,15 +1935,16 @@ export default function App() {
                       onSaveCurrent={handleSaveCurrentSearch}
                       savedSearches={savedSearches}
                     />
-                  </div>
-                </details>
+                    </div>
+                  </details>
+                </div>
 
                 {category === 'general' ? (
                   <div className="lg:hidden">
                     <WeatherWidget
                       compact
                       isLoading={isWeatherLoading}
-                      weather={weather}
+                      weather={displayWeather}
                     />
                   </div>
                 ) : null}
@@ -2067,7 +2089,7 @@ export default function App() {
                 {category === 'general' ? (
                   <WeatherWidget
                     isLoading={isWeatherLoading}
-                    weather={weather}
+                    weather={displayWeather}
                   />
                 ) : null}
 
