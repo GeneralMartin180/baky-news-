@@ -40,7 +40,6 @@ const GROUPS: Array<{
   label: string;
 }> = [
   { icon: ChartColumnBig, id: 'all', label: 'Všetko' },
-  { icon: ChartColumnBig, id: 'indices', label: 'Indexy' },
   { icon: Flame, id: 'energy', label: 'Energia' },
   { icon: Gem, id: 'metals', label: 'Kovy' },
   { icon: Wheat, id: 'food', label: 'Potraviny' },
@@ -51,8 +50,10 @@ const RANGES: Array<{ id: CommodityMarketRange; label: string }> = [
   { id: '5d', label: '5D' },
   { id: '1mo', label: '1M' },
   { id: '6mo', label: '6M' },
+  { id: 'ytd', label: 'YTD' },
   { id: '1y', label: '1R' },
   { id: '5y', label: '5R' },
+  { id: 'max', label: 'MAX' },
 ];
 
 function formatPrice(value: number) {
@@ -97,7 +98,7 @@ function formatChartTime(value: string, range: CommodityMarketRange) {
 
   return new Intl.DateTimeFormat('sk-SK', {
     month: 'short',
-    year: range === '1y' || range === '5y' ? '2-digit' : undefined,
+    year: range === 'ytd' || range === '1y' || range === '5y' || range === 'max' ? '2-digit' : undefined,
   }).format(date);
 }
 
@@ -116,7 +117,7 @@ function TrendIcon({ quote, className = 'h-3.5 w-3.5' }: { quote: CommodityMarke
   return <Icon className={className} />;
 }
 
-function getChartData(quote: CommodityMarketQuote, width: number, height: number) {
+function getChartData(quote: CommodityMarketQuote, width: number, height: number, compact: boolean) {
   const values = quote.history.map((point) => point.value);
   const rawMin = Math.min(...values);
   const rawMax = Math.max(...values);
@@ -124,31 +125,45 @@ function getChartData(quote: CommodityMarketQuote, width: number, height: number
   const min = rawMin - padding;
   const max = rawMax + padding;
   const range = max - min || 1;
+  const priceHeight = compact ? height : height * 0.76;
   const points = quote.history.map((point, index) => ({
     period: point.period,
     value: point.value,
+    volume: point.volume ?? null,
     x: (index / Math.max(quote.history.length - 1, 1)) * width,
-    y: height - ((point.value - min) / range) * height,
+    y: priceHeight - ((point.value - min) / range) * priceHeight,
   }));
   const linePath = points.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ');
-  const areaPath = `${linePath} L ${width} ${height} L 0 ${height} Z`;
-  return { areaPath, linePath, max, min, points };
+  const areaPath = `${linePath} L ${width} ${priceHeight} L 0 ${priceHeight} Z`;
+  const averagePoints = points
+    .map((point, index) => {
+      if (index < 19) return null;
+      const average = values.slice(index - 19, index + 1).reduce((sum, value) => sum + value, 0) / 20;
+      return { x: point.x, y: priceHeight - ((average - min) / range) * priceHeight };
+    })
+    .filter((point): point is { x: number; y: number } => point !== null);
+  const averagePath = averagePoints.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ');
+  const maxVolume = Math.max(...points.map((point) => point.volume ?? 0), 1);
+  return { areaPath, averagePath, linePath, max, maxVolume, min, points, priceHeight };
 }
 
 function MarketChart({
   compact = false,
   quote,
   range,
+  showAverage = false,
 }: {
   compact?: boolean;
   quote: CommodityMarketQuote;
   range: CommodityMarketRange;
+  showAverage?: boolean;
 }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const width = compact ? 420 : 840;
   const height = compact ? 120 : 310;
-  const chart = useMemo(() => getChartData(quote, width, height), [height, quote, width]);
+  const chart = useMemo(() => getChartData(quote, width, height, compact), [compact, height, quote, width]);
   const colors = getTrendClasses(quote);
+  const chartColor = compact ? colors.fill : '#0088cc';
   const hoveredPoint = hoveredIndex === null ? null : chart.points[hoveredIndex];
   const gradientId = `market-area-${quote.id}-${range}-${compact ? 'small' : 'large'}`;
 
@@ -171,8 +186,8 @@ function MarketChart({
       >
         <defs>
           <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor={colors.fill} stopOpacity="0.2" />
-            <stop offset="100%" stopColor={colors.fill} stopOpacity="0" />
+            <stop offset="0%" stopColor={chartColor} stopOpacity="0.18" />
+            <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
           </linearGradient>
         </defs>
 
@@ -184,14 +199,32 @@ function MarketChart({
                   strokeDasharray="3 5"
                   x1="0"
                   x2={width}
-                  y1={step * height}
-                  y2={step * height}
+                  y1={step * chart.priceHeight}
+                  y2={step * chart.priceHeight}
                 />
-                <text fill="#94a3b8" fontSize="11" textAnchor="end" x={width - 4} y={step * height - 6}>
+                <text fill="#94a3b8" fontSize="11" textAnchor="end" x={width - 4} y={step * chart.priceHeight - 6}>
                   {formatPrice(chart.max - step * (chart.max - chart.min))}
                 </text>
               </g>
             ))
+          : null}
+
+        {!compact
+          ? chart.points.map((point, index) => {
+              const volumeHeight = ((point.volume ?? 0) / chart.maxVolume) * (height - chart.priceHeight - 12);
+              const barWidth = Math.max(1, width / Math.max(chart.points.length, 1) - 1);
+              return (
+                <rect
+                  fill={index && point.value < chart.points[index - 1].value ? '#ef4444' : '#10b981'}
+                  height={volumeHeight}
+                  key={`volume-${point.period}`}
+                  opacity="0.42"
+                  width={barWidth}
+                  x={point.x - barWidth / 2}
+                  y={height - volumeHeight}
+                />
+              );
+            })
           : null}
 
         <motion.path
@@ -207,17 +240,30 @@ function MarketChart({
           fill="none"
           initial={{ opacity: 0.6, pathLength: 0 }}
           key={`${quote.id}-${range}`}
-          stroke={colors.fill}
+          stroke={chartColor}
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={compact ? 3 : 2.5}
           transition={{ duration: compact ? 0.55 : 0.8, ease: 'easeOut' }}
         />
 
+        {!compact && showAverage && chart.averagePath ? (
+          <motion.path
+            animate={{ opacity: 1, pathLength: 1 }}
+            d={chart.averagePath}
+            fill="none"
+            initial={{ opacity: 0, pathLength: 0 }}
+            stroke="#f59e0b"
+            strokeDasharray="6 4"
+            strokeWidth="2"
+            transition={{ duration: 0.55 }}
+          />
+        ) : null}
+
         {hoveredPoint ? (
           <g>
-            <line stroke={colors.fill} strokeDasharray="4 4" x1={hoveredPoint.x} x2={hoveredPoint.x} y1="0" y2={height} />
-            <circle cx={hoveredPoint.x} cy={hoveredPoint.y} fill="white" r="5" stroke={colors.fill} strokeWidth="3" />
+            <line stroke={chartColor} strokeDasharray="4 4" x1={hoveredPoint.x} x2={hoveredPoint.x} y1="0" y2={height} />
+            <circle cx={hoveredPoint.x} cy={hoveredPoint.y} fill="white" r="5" stroke={chartColor} strokeWidth="3" />
             <g transform={`translate(${Math.min(Math.max(hoveredPoint.x - 62, 4), width - 128)} ${Math.max(hoveredPoint.y - 58, 4)})`}>
               <rect fill="#0f172a" height="46" rx="6" width="124" />
               <text fill="white" fontSize="13" fontWeight="600" x="10" y="19">
@@ -234,22 +280,26 @@ function MarketChart({
   );
 }
 
-function QuoteButton({ active, onClick, quote }: { active?: boolean; onClick: () => void; quote: CommodityMarketQuote }) {
+function QuoteButton({ active, dark = false, onClick, quote }: { active?: boolean; dark?: boolean; onClick: () => void; quote: CommodityMarketQuote }) {
   const colors = getTrendClasses(quote);
   return (
     <button
       className={cn(
         'news-pressable min-w-0 border p-3 text-left transition-colors',
-        active ? 'border-sky-300 bg-sky-50/70' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+        dark
+          ? 'border-slate-700 bg-[#101827] hover:bg-[#17233a]'
+          : active
+            ? 'border-sky-400 border-l-4 bg-sky-50/70'
+            : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
       )}
       onClick={onClick}
       type="button"
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-xs font-semibold text-slate-950">{quote.shortLabel}</span>
+        <span className={cn('truncate text-xs font-semibold', dark ? 'text-white' : 'text-slate-950')}>{quote.shortLabel}</span>
         <span className="text-[10px] text-slate-400">{quote.symbol}</span>
       </div>
-      <div className="mt-2 text-base font-semibold tabular-nums text-slate-950">{formatPrice(quote.value)}</div>
+      <div className={cn('mt-2 text-base font-semibold tabular-nums', dark ? 'text-white' : 'text-slate-950')}>{formatPrice(quote.value)}</div>
       <div className={cn('mt-0.5 flex items-center gap-1 text-xs font-semibold tabular-nums', colors.text)}>
         <TrendIcon quote={quote} />
         {formatPercent(quote.changePercent)}
@@ -282,6 +332,7 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
   const [range, setRange] = useState<CommodityMarketRange>('1d');
   const [selectedId, setSelectedId] = useState(market.quotes[0]?.id ?? '');
   const [isRangeLoading, setIsRangeLoading] = useState(false);
+  const [showAverage, setShowAverage] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -339,19 +390,19 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
         >
           <motion.div
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="mx-auto flex h-[100dvh] w-full max-w-[1500px] flex-col overflow-hidden bg-white sm:h-[calc(100dvh-2rem)] sm:rounded-lg"
+            className="mx-auto flex h-[100dvh] w-full max-w-[1500px] flex-col overflow-hidden bg-[#f4f6f8] sm:h-[calc(100dvh-2rem)] sm:rounded-lg"
             exit={{ opacity: 0, scale: 0.99, y: 12 }}
             initial={{ opacity: 0, scale: 0.99, y: 12 }}
             onClick={(event) => event.stopPropagation()}
             transition={{ duration: 0.2 }}
           >
-            <header className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-6">
+            <header className="flex shrink-0 items-center justify-between border-t-4 border-sky-500 bg-[#0b1628] px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-6">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <ChartColumnBig className="h-5 w-5 text-sky-600" />
-                  <h2 className="truncate text-base font-semibold text-slate-950 sm:text-lg">Baky Markets</h2>
+                  <ChartColumnBig className="h-5 w-5 text-sky-400" />
+                  <h2 className="truncate text-base font-semibold text-white sm:text-lg">Baky Markets</h2>
                 </div>
-                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500">
+                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
                   <Clock3 className="h-3 w-3" />
                   Aktualizované {formatMarketTime(activeMarket.updatedAt)}
                 </div>
@@ -359,7 +410,7 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
               <div className="flex items-center gap-2">
                 <a
                   aria-label="Otvoriť zdroj trhových dát"
-                  className="news-pressable hidden h-9 items-center gap-2 border border-slate-200 px-3 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:flex"
+                  className="news-pressable hidden h-9 items-center gap-2 border border-slate-600 px-3 text-xs font-medium text-slate-200 hover:bg-white/10 sm:flex"
                   href={`https://finance.yahoo.com/quote/${encodeURIComponent(selectedQuote.symbol)}`}
                   rel="noopener noreferrer"
                   target="_blank"
@@ -369,7 +420,7 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
                 </a>
                 <button
                   aria-label="Zavrieť burzu"
-                  className="news-pressable flex h-9 w-9 items-center justify-center border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  className="news-pressable flex h-9 w-9 items-center justify-center border border-slate-600 text-slate-200 hover:bg-white/10"
                   onClick={onClose}
                   title="Zavrieť"
                   type="button"
@@ -379,12 +430,12 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
               </div>
             </header>
 
-            <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-slate-200 px-3 py-2 sm:px-6">
+            <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-slate-200 bg-white px-3 py-2 sm:px-6">
               {GROUPS.map(({ icon: Icon, id, label }) => (
                 <button
                   className={cn(
                     'news-pressable flex shrink-0 items-center gap-1.5 px-3 py-2 text-xs font-medium',
-                    activeGroup === id ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100'
+                    activeGroup === id ? 'bg-sky-600 text-white' : 'text-slate-600 hover:bg-slate-100'
                   )}
                   key={id}
                   onClick={() => setActiveGroup(id)}
@@ -397,7 +448,7 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
             </div>
 
             <div className="grid min-h-0 flex-1 lg:grid-cols-[270px_minmax(0,1fr)]">
-              <aside className="border-b border-slate-200 lg:min-h-0 lg:overflow-y-auto lg:border-b-0 lg:border-r">
+              <aside className="border-b border-slate-200 bg-white lg:min-h-0 lg:overflow-y-auto lg:border-b-0 lg:border-r">
                 <div className="flex gap-2 overflow-x-auto p-3 lg:grid lg:gap-1 lg:p-2">
                   {filteredQuotes.map((quote) => (
                     <div className="w-[152px] shrink-0 lg:w-auto" key={quote.id}>
@@ -407,7 +458,7 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
                 </div>
               </aside>
 
-              <main className="min-h-0 overflow-y-auto">
+              <main className="min-h-0 overflow-y-auto bg-white">
                 <div className="mx-auto max-w-6xl px-4 py-5 sm:px-7 sm:py-7">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="min-w-0">
@@ -431,12 +482,12 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
                         <span className="font-normal text-slate-400">{activeMarket.frequencyLabel}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 bg-slate-100 p-1">
+                    <div className="flex max-w-full items-center gap-1 overflow-x-auto border-b border-slate-200">
                       {RANGES.map((item) => (
                         <button
                           className={cn(
-                            'news-pressable min-w-9 px-2.5 py-1.5 text-xs font-semibold',
-                            range === item.id ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-950'
+                            'news-pressable min-w-9 shrink-0 border-b-2 px-2.5 py-2 text-xs font-semibold',
+                            range === item.id ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-950'
                           )}
                           key={item.id}
                           onClick={() => setRange(item.id)}
@@ -448,13 +499,30 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
                     </div>
                   </div>
 
-                  <div className="relative mt-6 border-y border-slate-200 py-4">
+                  <div className="mt-6 flex items-center justify-between border-b border-slate-200 pb-2">
+                    <div className="flex items-center gap-4 text-[11px] font-medium text-slate-500">
+                      <span className="flex items-center gap-1.5"><span className="h-0.5 w-5 bg-sky-600" /> CENA</span>
+                      <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 bg-emerald-500/40" /> OBJEM</span>
+                    </div>
+                    <button
+                      className={cn(
+                        'news-pressable border px-2.5 py-1.5 text-[11px] font-semibold',
+                        showAverage ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                      )}
+                      onClick={() => setShowAverage((value) => !value)}
+                      type="button"
+                    >
+                      MA20
+                    </button>
+                  </div>
+
+                  <div className="relative border-b border-slate-200 py-4">
                     {isRangeLoading ? (
                       <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/75 backdrop-blur-[1px]">
                         <LoaderCircle className="h-6 w-6 animate-spin text-sky-600" />
                       </div>
                     ) : null}
-                    <MarketChart quote={selectedQuote} range={range} />
+                    <MarketChart quote={selectedQuote} range={range} showAverage={showAverage} />
                   </div>
 
                   <div className="mt-6 grid gap-x-8 md:grid-cols-[minmax(0,1fr)_280px]">
@@ -470,12 +538,15 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
                         Trhové údaje môžu byť oneskorené. Futures ceny sa môžu líšiť od spotových cien komodít.
                       </div>
                     </div>
-                    <dl className="mt-6 grid grid-cols-2 gap-x-4 md:mt-0 md:block">
+                    <div className="mt-6 md:mt-0">
+                      <h4 className="border-b-2 border-sky-600 pb-2 text-sm font-semibold uppercase text-slate-950">Kľúčové dáta</h4>
+                      <dl className="grid grid-cols-2 gap-x-4 md:block">
                       <Stat label="Predchádzajúca hodnota" value={selectedQuote.previousValue === null ? '—' : formatPrice(selectedQuote.previousValue)} />
                       <Stat label="Denné rozpätie" value={selectedQuote.dayLow === null || selectedQuote.dayHigh === null ? '—' : `${formatPrice(selectedQuote.dayLow)} – ${formatPrice(selectedQuote.dayHigh)}`} />
                       <Stat label="52-týždňové rozpätie" value={selectedQuote.fiftyTwoWeekLow === null || selectedQuote.fiftyTwoWeekHigh === null ? '—' : `${formatPrice(selectedQuote.fiftyTwoWeekLow)} – ${formatPrice(selectedQuote.fiftyTwoWeekHigh)}`} />
                       <Stat label="Objem" value={formatCompact(selectedQuote.volume)} />
-                    </dl>
+                      </dl>
+                    </div>
                   </div>
                 </div>
               </main>
@@ -495,8 +566,8 @@ export function CommodityMarketWidget({
   market,
 }: CommodityMarketWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const featuredQuote = market?.quotes.find((quote) => quote.id === 'nasdaq') ?? market?.quotes[0] ?? null;
-  const highlights = market?.quotes.filter((quote) => ['nasdaq', 'sp-500', 'wti', 'gold'].includes(quote.id)) ?? [];
+  const featuredQuote = market?.quotes.find((quote) => quote.id === 'wti') ?? market?.quotes[0] ?? null;
+  const highlights = market?.quotes.filter((quote) => ['wti', 'brent', 'gold', 'wheat'].includes(quote.id)) ?? [];
 
   useEffect(() => {
     if (!market) setIsOpen(false);
@@ -527,11 +598,11 @@ export function CommodityMarketWidget({
         viewport={{ once: true }}
         whileInView={{ opacity: 1, y: 0 }}
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+        <div className="flex items-center justify-between border-t-4 border-sky-500 bg-[#0b1628] px-4 py-3">
           <div>
             <div className="flex items-center gap-2">
-              <ChartColumnBig className="h-4 w-4 text-sky-600" />
-              <h3 className="text-sm font-semibold text-slate-950">Trhy</h3>
+              <ChartColumnBig className="h-4 w-4 text-sky-400" />
+              <h3 className="text-sm font-semibold text-white">Komoditné trhy</h3>
               {isLive ? (
                 <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-700">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
@@ -539,11 +610,11 @@ export function CommodityMarketWidget({
                 </span>
               ) : null}
             </div>
-            <p className="mt-0.5 text-[11px] text-slate-500">Indexy, energia, kovy a potraviny</p>
+            <p className="mt-0.5 text-[11px] text-slate-400">Energia, kovy a potraviny</p>
           </div>
           <button
             aria-label="Otvoriť detail burzy"
-            className="news-pressable flex h-9 w-9 items-center justify-center border border-slate-200 text-slate-600 hover:bg-slate-50"
+            className="news-pressable flex h-9 w-9 items-center justify-center border border-slate-600 text-slate-200 hover:bg-white/10"
             onClick={() => setIsOpen(true)}
             title="Otvoriť detail"
             type="button"
@@ -552,10 +623,10 @@ export function CommodityMarketWidget({
           </button>
         </div>
 
-        <div className="grid grid-cols-2 border-b border-slate-200 lg:grid-cols-4">
+        <div className="grid grid-cols-2 border-b border-slate-700 bg-[#101827] lg:grid-cols-4">
           {highlights.map((quote) => (
             <div className="border-b border-r border-slate-200 last:border-r-0 lg:border-b-0" key={quote.id}>
-              <QuoteButton onClick={() => setIsOpen(true)} quote={quote} />
+              <QuoteButton dark onClick={() => setIsOpen(true)} quote={quote} />
             </div>
           ))}
         </div>

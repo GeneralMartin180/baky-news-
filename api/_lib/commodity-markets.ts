@@ -37,14 +37,13 @@ const RANGE_CONFIG: Record<CommodityMarketRange, { interval: string; label: stri
   "5d": { interval: "15m", label: "5 dní" },
   "1mo": { interval: "1d", label: "1 mesiac" },
   "6mo": { interval: "1d", label: "6 mesiacov" },
+  "ytd": { interval: "1d", label: "od začiatku roka" },
   "1y": { interval: "1d", label: "1 rok" },
   "5y": { interval: "1wk", label: "5 rokov" },
+  "max": { interval: "1mo", label: "celá história" },
 };
 
 const QUOTES: QuoteDefinition[] = [
-  { group: "indices", id: "nasdaq", label: "NASDAQ Composite", shortLabel: "NASDAQ", symbol: "^IXIC" },
-  { group: "indices", id: "sp-500", label: "S&P 500", shortLabel: "S&P 500", symbol: "^GSPC" },
-  { group: "indices", id: "dow-jones", label: "Dow Jones Industrial Average", shortLabel: "Dow Jones", symbol: "^DJI" },
   { group: "energy", id: "wti", label: "Ropa WTI", shortLabel: "WTI", symbol: "CL=F" },
   { group: "energy", id: "brent", label: "Ropa Brent", shortLabel: "Brent", symbol: "BZ=F" },
   { group: "energy", id: "natural-gas", label: "Zemný plyn", shortLabel: "Plyn", symbol: "NG=F" },
@@ -94,10 +93,14 @@ function buildHistory(result: YahooChartResult): CommodityMarketPoint[] {
   const closes = result.indicators?.quote?.[0]?.close ?? [];
 
   return timestamps
-    .map((timestamp, index) => {
+    .map<CommodityMarketPoint | null>((timestamp, index) => {
       const value = finiteNumber(closes[index]);
       if (value === null) return null;
-      return { period: new Date(timestamp * 1000).toISOString(), value: round(value) };
+      return {
+        period: new Date(timestamp * 1000).toISOString(),
+        value: round(value),
+        volume: finiteNumber(result.indicators?.quote?.[0]?.volume?.[index]),
+      };
     })
     .filter((point): point is CommodityMarketPoint => point !== null);
 }

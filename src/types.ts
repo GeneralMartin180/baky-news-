@@ -71,13 +71,14 @@ export interface WeatherSnapshot {
   windSpeedKmh: number;
 }
 
-export type CommodityMarketGroup = 'indices' | 'energy' | 'metals' | 'food';
+export type CommodityMarketGroup = 'energy' | 'metals' | 'food';
 export type CommodityMarketTrend = 'up' | 'down' | 'flat';
-export type CommodityMarketRange = '1d' | '5d' | '1mo' | '6mo' | '1y' | '5y';
+export type CommodityMarketRange = '1d' | '5d' | '1mo' | '6mo' | 'ytd' | '1y' | '5y' | 'max';
 
 export interface CommodityMarketPoint {
   period: string;
   value: number;
+  volume?: number | null;
 }
 
 export interface CommodityMarketQuote {
