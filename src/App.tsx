@@ -1665,23 +1665,15 @@ export default function App() {
   return (
     <div className="min-h-screen overflow-x-clip bg-[#f4f5f7] text-slate-950">
       <header className="news-glass z-50 border-b border-slate-200/75 pt-[env(safe-area-inset-top)] sm:sticky sm:top-0">
-        <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-2.5 px-3 py-2.5 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
-          <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none sm:items-start sm:gap-4">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-2.5 px-3 py-2.5 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-3.5 lg:px-8">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none sm:gap-4">
             <Logo className="h-9 w-9 shrink-0 sm:h-14 sm:w-14" />
-            <div className="min-w-0 sm:pt-1.5 lg:pt-2">
-              <div className="flex items-center gap-2">
-                <img
-                  src="/baky-news-wordmark.svg"
-                  alt="Baky News"
-                  className="h-7 w-auto max-w-[165px] shrink-0 object-contain sm:h-[3.1rem] sm:max-w-[270px] lg:h-[3.25rem] lg:max-w-[290px]"
-                />
-                <span className="news-soft-shadow hidden rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 sm:inline-flex">
-                  Live
-                </span>
-              </div>
-              <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">
-                Rýchly, čistý a čitateľný prehľad správ.
-              </p>
+            <div className="min-w-0">
+              <img
+                src="/baky-news-wordmark.svg"
+                alt="Baky News"
+                className="h-7 w-auto max-w-[165px] shrink-0 object-contain sm:h-[2.85rem] sm:max-w-[248px] lg:h-[3rem] lg:max-w-[270px]"
+              />
             </div>
           </div>
 
@@ -1830,12 +1822,6 @@ export default function App() {
                       <Settings2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       {settingsLabel}
                     </span>
-                    {localEditionSummary ? (
-                      <span className="news-soft-shadow hidden items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50 px-2.5 py-1 text-sky-700 sm:inline-flex sm:gap-2 sm:px-3 sm:py-1.5">
-                        <MapPinned className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                        {localEditionSummary.label}
-                      </span>
-                    ) : null}
                   </div>
                 </div>
 
