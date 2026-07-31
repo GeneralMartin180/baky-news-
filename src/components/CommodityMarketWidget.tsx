@@ -265,11 +265,11 @@ function MarketChart({
             <line stroke={chartColor} strokeDasharray="4 4" x1={hoveredPoint.x} x2={hoveredPoint.x} y1="0" y2={height} />
             <circle cx={hoveredPoint.x} cy={hoveredPoint.y} fill="white" r="5" stroke={chartColor} strokeWidth="3" />
             <g transform={`translate(${Math.min(Math.max(hoveredPoint.x - 62, 4), width - 128)} ${Math.max(hoveredPoint.y - 58, 4)})`}>
-              <rect fill="#0f172a" height="46" rx="6" width="124" />
-              <text fill="white" fontSize="13" fontWeight="600" x="10" y="19">
+              <rect fill="white" height="46" rx="6" stroke="#cbd5e1" width="124" />
+              <text fill="#0f172a" fontSize="13" fontWeight="600" x="10" y="19">
                 {formatPrice(hoveredPoint.value)}
               </text>
-              <text fill="#cbd5e1" fontSize="10" x="10" y="35">
+              <text fill="#64748b" fontSize="10" x="10" y="35">
                 {formatChartTime(hoveredPoint.period, range)}
               </text>
             </g>
@@ -287,7 +287,7 @@ function QuoteButton({ active, dark = false, onClick, quote }: { active?: boolea
       className={cn(
         'news-pressable min-w-0 border p-3 text-left transition-colors',
         dark
-          ? 'border-slate-700 bg-[#101827] hover:bg-[#17233a]'
+          ? 'border-sky-100 bg-sky-50/80 hover:border-sky-200 hover:bg-sky-100'
           : active
             ? 'border-sky-400 border-l-4 bg-sky-50/70'
             : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
@@ -296,10 +296,10 @@ function QuoteButton({ active, dark = false, onClick, quote }: { active?: boolea
       type="button"
     >
       <div className="flex items-center justify-between gap-2">
-        <span className={cn('truncate text-xs font-semibold', dark ? 'text-white' : 'text-slate-950')}>{quote.shortLabel}</span>
+        <span className="truncate text-xs font-semibold text-slate-950">{quote.shortLabel}</span>
         <span className="text-[10px] text-slate-400">{quote.symbol}</span>
       </div>
-      <div className={cn('mt-2 text-base font-semibold tabular-nums', dark ? 'text-white' : 'text-slate-950')}>{formatPrice(quote.value)}</div>
+      <div className="mt-2 text-base font-semibold tabular-nums text-slate-950">{formatPrice(quote.value)}</div>
       <div className={cn('mt-0.5 flex items-center gap-1 text-xs font-semibold tabular-nums', colors.text)}>
         <TrendIcon quote={quote} />
         {formatPercent(quote.changePercent)}
@@ -396,13 +396,13 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
             onClick={(event) => event.stopPropagation()}
             transition={{ duration: 0.2 }}
           >
-            <header className="flex shrink-0 items-center justify-between border-t-4 border-sky-500 bg-[#0b1628] px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-6">
+            <header className="flex shrink-0 items-center justify-between border-t-4 border-sky-500 bg-gradient-to-r from-sky-50 via-white to-slate-50 px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-6">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <ChartColumnBig className="h-5 w-5 text-sky-400" />
-                  <h2 className="truncate text-base font-semibold text-white sm:text-lg">Baky Markets</h2>
+                  <ChartColumnBig className="h-5 w-5 text-sky-600" />
+                  <h2 className="truncate text-base font-semibold text-slate-950 sm:text-lg">Baky Markets</h2>
                 </div>
-                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
+                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500">
                   <Clock3 className="h-3 w-3" />
                   Aktualizované {formatMarketTime(activeMarket.updatedAt)}
                 </div>
@@ -410,7 +410,7 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
               <div className="flex items-center gap-2">
                 <a
                   aria-label="Otvoriť zdroj trhových dát"
-                  className="news-pressable hidden h-9 items-center gap-2 border border-slate-600 px-3 text-xs font-medium text-slate-200 hover:bg-white/10 sm:flex"
+                  className="news-pressable hidden h-9 items-center gap-2 border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:flex"
                   href={`https://finance.yahoo.com/quote/${encodeURIComponent(selectedQuote.symbol)}`}
                   rel="noopener noreferrer"
                   target="_blank"
@@ -420,7 +420,7 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
                 </a>
                 <button
                   aria-label="Zavrieť burzu"
-                  className="news-pressable flex h-9 w-9 items-center justify-center border border-slate-600 text-slate-200 hover:bg-white/10"
+                  className="news-pressable flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                   onClick={onClose}
                   title="Zavrieť"
                   type="button"
@@ -598,11 +598,11 @@ export function CommodityMarketWidget({
         viewport={{ once: true }}
         whileInView={{ opacity: 1, y: 0 }}
       >
-        <div className="flex items-center justify-between border-t-4 border-sky-500 bg-[#0b1628] px-4 py-3">
+        <div className="flex items-center justify-between border-t-4 border-sky-500 bg-gradient-to-r from-sky-50 via-white to-slate-50 px-4 py-3">
           <div>
             <div className="flex items-center gap-2">
-              <ChartColumnBig className="h-4 w-4 text-sky-400" />
-              <h3 className="text-sm font-semibold text-white">Komoditné trhy</h3>
+              <ChartColumnBig className="h-4 w-4 text-sky-600" />
+              <h3 className="text-sm font-semibold text-slate-950">Komoditné trhy</h3>
               {isLive ? (
                 <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-700">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
@@ -610,11 +610,11 @@ export function CommodityMarketWidget({
                 </span>
               ) : null}
             </div>
-            <p className="mt-0.5 text-[11px] text-slate-400">Energia, kovy a potraviny</p>
+            <p className="mt-0.5 text-[11px] text-slate-500">Energia, kovy a potraviny</p>
           </div>
           <button
             aria-label="Otvoriť detail burzy"
-            className="news-pressable flex h-9 w-9 items-center justify-center border border-slate-600 text-slate-200 hover:bg-white/10"
+            className="news-pressable flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
             onClick={() => setIsOpen(true)}
             title="Otvoriť detail"
             type="button"
@@ -623,7 +623,7 @@ export function CommodityMarketWidget({
           </button>
         </div>
 
-        <div className="grid grid-cols-2 border-b border-slate-700 bg-[#101827] lg:grid-cols-4">
+        <div className="grid grid-cols-2 border-b border-slate-200 bg-white lg:grid-cols-4">
           {highlights.map((quote) => (
             <div className="border-b border-r border-slate-200 last:border-r-0 lg:border-b-0" key={quote.id}>
               <QuoteButton dark onClick={() => setIsOpen(true)} quote={quote} />
