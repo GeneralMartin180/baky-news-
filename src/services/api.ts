@@ -117,9 +117,11 @@ export async function fetchWeather(
 }
 
 export async function fetchCommodityMarkets(
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  range: CommodityMarketSnapshot['range'] = '1d'
 ): Promise<CommodityMarketSnapshot> {
   const url = new URL('/api/markets', window.location.origin);
+  url.searchParams.set('range', range);
   const response = await fetch(url.toString(), { signal });
   if (!response.ok) {
     throw new Error(`Failed to fetch markets from local API (${response.status})`);

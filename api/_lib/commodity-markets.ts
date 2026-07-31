@@ -1,346 +1,221 @@
-import ExcelJS from "exceljs";
-
 import type {
+  CommodityMarketGroup,
   CommodityMarketPoint,
   CommodityMarketQuote,
+  CommodityMarketRange,
   CommodityMarketSnapshot,
 } from "../../src/types";
 
 type QuoteDefinition = {
-  group: CommodityMarketQuote["group"];
-  header: string;
+  group: CommodityMarketGroup;
   id: string;
   label: string;
   shortLabel: string;
+  symbol: string;
 };
 
-const WORLD_BANK_COMMODITY_PAGE_URL = "https://www.worldbank.org/en/research/commodity-markets";
-const SOURCE_LABEL = "World Bank Pink Sheet";
-const FETCH_TIMEOUT_MS = 7000;
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-const STALE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-const HISTORY_POINTS = 6;
+type YahooChartResult = {
+  indicators?: {
+    quote?: Array<{
+      close?: Array<number | null>;
+      volume?: Array<number | null>;
+    }>;
+  };
+  meta?: Record<string, unknown>;
+  timestamp?: number[];
+};
+
+const YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart";
+const SOURCE_LABEL = "Yahoo Finance";
+const SOURCE_URL = "https://finance.yahoo.com/markets/";
+const FETCH_TIMEOUT_MS = 6500;
+const CACHE_TTL_MS = 30 * 1000;
+const STALE_CACHE_TTL_MS = 10 * 60 * 1000;
+
+const RANGE_CONFIG: Record<CommodityMarketRange, { interval: string; label: string }> = {
+  "1d": { interval: "5m", label: "Dnes" },
+  "5d": { interval: "15m", label: "5 dní" },
+  "1mo": { interval: "1d", label: "1 mesiac" },
+  "6mo": { interval: "1d", label: "6 mesiacov" },
+  "1y": { interval: "1d", label: "1 rok" },
+  "5y": { interval: "1wk", label: "5 rokov" },
+};
 
 const QUOTES: QuoteDefinition[] = [
-  {
-    group: "energy",
-    header: "Crude oil, Brent",
-    id: "crude-oil-brent",
-    label: "Ropa Brent",
-    shortLabel: "Brent",
-  },
-  {
-    group: "energy",
-    header: "Crude oil, WTI",
-    id: "crude-oil-wti",
-    label: "Ropa WTI",
-    shortLabel: "WTI",
-  },
-  {
-    group: "oils",
-    header: "Palm oil",
-    id: "palm-oil",
-    label: "Palmový olej",
-    shortLabel: "Palmový",
-  },
-  {
-    group: "oils",
-    header: "Soybean oil",
-    id: "soybean-oil",
-    label: "Sójový olej",
-    shortLabel: "Sójový",
-  },
-  {
-    group: "oils",
-    header: "Sunflower oil",
-    id: "sunflower-oil",
-    label: "Slnečnicový olej",
-    shortLabel: "Slnečnicový",
-  },
-  {
-    group: "food",
-    header: "Maize",
-    id: "maize",
-    label: "Kukurica",
-    shortLabel: "Kukurica",
-  },
-  {
-    group: "food",
-    header: "Wheat, US SRW",
-    id: "wheat-srw",
-    label: "Pšenica",
-    shortLabel: "Pšenica",
-  },
-  {
-    group: "food",
-    header: "Rice, Thai 5%",
-    id: "rice-thai-5",
-    label: "Ryža",
-    shortLabel: "Ryža",
-  },
-  {
-    group: "food",
-    header: "Sugar, world",
-    id: "sugar-world",
-    label: "Cukor",
-    shortLabel: "Cukor",
-  },
+  { group: "indices", id: "nasdaq", label: "NASDAQ Composite", shortLabel: "NASDAQ", symbol: "^IXIC" },
+  { group: "indices", id: "sp-500", label: "S&P 500", shortLabel: "S&P 500", symbol: "^GSPC" },
+  { group: "indices", id: "dow-jones", label: "Dow Jones Industrial Average", shortLabel: "Dow Jones", symbol: "^DJI" },
+  { group: "energy", id: "wti", label: "Ropa WTI", shortLabel: "WTI", symbol: "CL=F" },
+  { group: "energy", id: "brent", label: "Ropa Brent", shortLabel: "Brent", symbol: "BZ=F" },
+  { group: "energy", id: "natural-gas", label: "Zemný plyn", shortLabel: "Plyn", symbol: "NG=F" },
+  { group: "metals", id: "gold", label: "Zlato", shortLabel: "Zlato", symbol: "GC=F" },
+  { group: "metals", id: "silver", label: "Striebro", shortLabel: "Striebro", symbol: "SI=F" },
+  { group: "food", id: "wheat", label: "Pšenica", shortLabel: "Pšenica", symbol: "ZW=F" },
+  { group: "food", id: "corn", label: "Kukurica", shortLabel: "Kukurica", symbol: "ZC=F" },
+  { group: "food", id: "soybeans", label: "Sójové bôby", shortLabel: "Sója", symbol: "ZS=F" },
+  { group: "food", id: "sugar", label: "Cukor", shortLabel: "Cukor", symbol: "SB=F" },
 ];
 
-let cache:
-  | {
-      expiresAt: number;
-      snapshot: CommodityMarketSnapshot;
-      staleUntil: number;
-    }
-  | null = null;
+const cache = new Map<
+  CommodityMarketRange,
+  { expiresAt: number; snapshot: CommodityMarketSnapshot; staleUntil: number }
+>();
 
-function normalizeHeader(value: string) {
-  return value.replace(/\*+/g, "").replace(/\s+/g, " ").trim();
+function finiteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function normalizeUnit(value: string) {
-  return value.replace(/[()]/g, "").replace(/\s+/g, " ").trim();
+function stringValue(value: unknown, fallback = "") {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
-function isPeriodCell(value: string) {
-  return /^\d{4}M\d{2}$/.test(value);
+function toIsoTime(epochSeconds: unknown) {
+  const value = finiteNumber(epochSeconds);
+  return value === null ? new Date().toISOString() : new Date(value * 1000).toISOString();
 }
 
-function parseWorkbookUpdatedAt(rawValue: string) {
-  const match = rawValue.match(/Updated on\s+(.+)/i);
-  if (!match) {
-    return new Date().toISOString();
-  }
-
-  const parsed = new Date(match[1]);
-  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+function round(value: number, decimals = 4) {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
 }
 
-function parsePeriod(period: string) {
-  const year = Number(period.slice(0, 4));
-  const month = Number(period.slice(5, 7));
-  return new Date(Date.UTC(year, month - 1, 1)).toISOString();
+function getMarketOpen(meta: Record<string, unknown>) {
+  const periods = meta.currentTradingPeriod as
+    | { regular?: { end?: number; start?: number } }
+    | undefined;
+  const start = finiteNumber(periods?.regular?.start);
+  const end = finiteNumber(periods?.regular?.end);
+  const now = Date.now() / 1000;
+  return start !== null && end !== null && now >= start && now <= end;
 }
 
-function readCellNumber(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
+function buildHistory(result: YahooChartResult): CommodityMarketPoint[] {
+  const timestamps = result.timestamp ?? [];
+  const closes = result.indicators?.quote?.[0]?.close ?? [];
 
-  if (typeof value === "string") {
-    const normalized = value.trim().replace(/,/g, "");
-    if (!normalized || normalized === "…" || normalized === "...") {
-      return null;
-    }
-
-    const parsed = Number(normalized);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-
-  if (value && typeof value === "object") {
-    if ("result" in value) {
-      return readCellNumber((value as { result?: unknown }).result);
-    }
-
-    if ("text" in value) {
-      return readCellNumber((value as { text?: unknown }).text);
-    }
-  }
-
-  return null;
+  return timestamps
+    .map((timestamp, index) => {
+      const value = finiteNumber(closes[index]);
+      if (value === null) return null;
+      return { period: new Date(timestamp * 1000).toISOString(), value: round(value) };
+    })
+    .filter((point): point is CommodityMarketPoint => point !== null);
 }
 
-async function fetchWithTimeout(url: string) {
+async function fetchQuote(definition: QuoteDefinition, range: CommodityMarketRange) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const config = RANGE_CONFIG[range];
+  const url = `${YAHOO_CHART_URL}/${encodeURIComponent(definition.symbol)}?range=${range}&interval=${config.interval}&includePrePost=false&events=div%2Csplits`;
 
   try {
     const response = await fetch(url, {
       headers: {
-        Accept:
-          "text/html,application/xhtml+xml,application/xml,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,*/*",
-        "User-Agent": "Mozilla/5.0 BakyNews/1.0",
+        Accept: "application/json",
+        "User-Agent": "Mozilla/5.0 (compatible; BakyNews/1.0; +https://baky-news.vercel.app/)",
       },
       signal: controller.signal,
     });
 
-    if (!response.ok) {
-      throw new Error(`Commodity request failed with ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`Market request failed with ${response.status}`);
 
-    return response;
+    const payload = (await response.json()) as {
+      chart?: { error?: unknown; result?: YahooChartResult[] };
+    };
+    const result = payload.chart?.result?.[0];
+    if (!result || payload.chart?.error) throw new Error(`No chart data for ${definition.symbol}`);
+
+    const meta = result.meta ?? {};
+    const history = buildHistory(result);
+    const value = finiteNumber(meta.regularMarketPrice) ?? history.at(-1)?.value ?? null;
+    if (value === null || history.length < 2) throw new Error(`Incomplete chart data for ${definition.symbol}`);
+
+    const firstHistoryValue = history[0].value;
+    const chartPreviousClose = finiteNumber(meta.chartPreviousClose) ?? finiteNumber(meta.previousClose);
+    const previousValue = range === "1d" ? chartPreviousClose ?? firstHistoryValue : firstHistoryValue;
+    const change = previousValue === null ? null : round(value - previousValue);
+    const changePercent =
+      previousValue === null || previousValue === 0
+        ? null
+        : round(((value - previousValue) / previousValue) * 100, 2);
+
+    return {
+      change,
+      changePercent,
+      currency: stringValue(meta.currency, "USD"),
+      dayHigh: finiteNumber(meta.regularMarketDayHigh),
+      dayLow: finiteNumber(meta.regularMarketDayLow),
+      exchange: stringValue(meta.fullExchangeName, stringValue(meta.exchangeName, "Burza")),
+      fiftyTwoWeekHigh: finiteNumber(meta.fiftyTwoWeekHigh),
+      fiftyTwoWeekLow: finiteNumber(meta.fiftyTwoWeekLow),
+      group: definition.group,
+      history,
+      id: definition.id,
+      label: stringValue(meta.longName, definition.label),
+      marketOpen: getMarketOpen(meta),
+      marketTime: toIsoTime(meta.regularMarketTime),
+      previousValue,
+      shortLabel: definition.shortLabel,
+      symbol: definition.symbol,
+      trend:
+        changePercent === null || Math.abs(changePercent) < 0.005
+          ? "flat"
+          : changePercent > 0
+            ? "up"
+            : "down",
+      unit: stringValue(meta.currency, "USD"),
+      value: round(value),
+      volume: finiteNumber(meta.regularMarketVolume),
+    } satisfies CommodityMarketQuote;
   } finally {
     clearTimeout(timeout);
   }
 }
 
-async function resolveLatestWorkbookUrl() {
-  const response = await fetchWithTimeout(WORLD_BANK_COMMODITY_PAGE_URL);
-  const html = await response.text();
-  const match = html.match(
-    /<a href="([^"]+CMO-Historical-Data-Monthly\.xlsx)">Monthly prices<\/a>/i
+async function readMarketSnapshot(range: CommodityMarketRange) {
+  const settled = await Promise.allSettled(QUOTES.map((quote) => fetchQuote(quote, range)));
+  const quotes = settled
+    .filter((result): result is PromiseFulfilledResult<CommodityMarketQuote> => result.status === "fulfilled")
+    .map((result) => result.value);
+
+  if (quotes.length < 3) throw new Error("Market feed returned too few instruments.");
+
+  const latestTimestamp = quotes.reduce(
+    (latest, quote) => Math.max(latest, new Date(quote.marketTime).getTime()),
+    0
   );
-
-  if (!match?.[1]) {
-    throw new Error("Monthly commodity workbook URL was not found.");
-  }
-
-  return match[1];
-}
-
-function resolveQuoteTrend(changePercent: number | null): CommodityMarketQuote["trend"] {
-  if (changePercent === null || Math.abs(changePercent) < 0.05) {
-    return "flat";
-  }
-
-  return changePercent > 0 ? "up" : "down";
-}
-
-function findPeriodRowIndexes(sheet: ExcelJS.Worksheet) {
-  const indexes: number[] = [];
-
-  for (let rowIndex = 7; rowIndex <= sheet.rowCount; rowIndex += 1) {
-    const period = String(sheet.getRow(rowIndex).getCell(1).text || "").trim();
-    if (isPeriodCell(period)) {
-      indexes.push(rowIndex);
-    }
-  }
-
-  return indexes;
-}
-
-function buildColumnMap(sheet: ExcelJS.Worksheet) {
-  const headers = sheet.getRow(5);
-  const units = sheet.getRow(6);
-  const columns = new Map<string, { index: number; unit: string }>();
-
-  for (let columnIndex = 2; columnIndex <= headers.cellCount; columnIndex += 1) {
-    const header = normalizeHeader(headers.getCell(columnIndex).text || "");
-    if (!header) {
-      continue;
-    }
-
-    columns.set(header, {
-      index: columnIndex,
-      unit: normalizeUnit(units.getCell(columnIndex).text || "USD"),
-    });
-  }
-
-  return columns;
-}
-
-function buildQuote(
-  currentRow: ExcelJS.Row,
-  previousRow: ExcelJS.Row,
-  historyRows: ExcelJS.Row[],
-  columns: Map<string, { index: number; unit: string }>,
-  definition: QuoteDefinition
-): CommodityMarketQuote | null {
-  const column = columns.get(normalizeHeader(definition.header));
-  if (!column) {
-    return null;
-  }
-
-  const value = readCellNumber(currentRow.getCell(column.index).value);
-  if (value === null) {
-    return null;
-  }
-
-  const previousValue = readCellNumber(previousRow.getCell(column.index).value);
-  const changePercent =
-    previousValue && previousValue !== 0
-      ? Number((((value - previousValue) / previousValue) * 100).toFixed(1))
-      : null;
-  const history = historyRows
-    .map((row) => {
-      const pointValue = readCellNumber(row.getCell(column.index).value);
-      const period = String(row.getCell(1).text || "").trim();
-
-      if (pointValue === null || !period) {
-        return null;
-      }
-
-      return {
-        period: parsePeriod(period),
-        value: Number(pointValue.toFixed(2)),
-      } satisfies CommodityMarketPoint;
-    })
-    .filter((point): point is CommodityMarketPoint => Boolean(point));
+  const updatedAt = new Date(latestTimestamp || Date.now()).toISOString();
 
   return {
-    changePercent,
-    group: definition.group,
-    history,
-    id: definition.id,
-    label: definition.label,
-    previousValue,
-    shortLabel: definition.shortLabel,
-    trend: resolveQuoteTrend(changePercent),
-    unit: column.unit,
-    value: Number(value.toFixed(2)),
-  };
-}
-
-async function readWorkbookSnapshot() {
-  const workbookUrl = await resolveLatestWorkbookUrl();
-  const workbookResponse = await fetchWithTimeout(workbookUrl);
-  const workbookBuffer = Buffer.from(await workbookResponse.arrayBuffer());
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(workbookBuffer);
-
-  const sheet = workbook.getWorksheet("Monthly Prices");
-  if (!sheet) {
-    throw new Error("Monthly Prices sheet is missing.");
-  }
-
-  const periodRows = findPeriodRowIndexes(sheet);
-  if (periodRows.length < 2) {
-    throw new Error("Commodity workbook does not contain enough monthly rows.");
-  }
-
-  const currentRow = sheet.getRow(periodRows[periodRows.length - 1]);
-  const previousRow = sheet.getRow(periodRows[periodRows.length - 2]);
-  const historyRows = periodRows.slice(-HISTORY_POINTS).map((rowIndex) => sheet.getRow(rowIndex));
-  const latestPeriod = String(currentRow.getCell(1).text || "").trim();
-  const columns = buildColumnMap(sheet);
-  const quotes = QUOTES.map((definition) =>
-    buildQuote(currentRow, previousRow, historyRows, columns, definition)
-  ).filter((quote): quote is CommodityMarketQuote => Boolean(quote));
-
-  if (!quotes.length) {
-    throw new Error("Commodity workbook did not produce any quotes.");
-  }
-
-  return {
-    frequencyLabel: "Mesačný priemer",
-    latestPeriod: parsePeriod(latestPeriod),
+    frequencyLabel: RANGE_CONFIG[range].label,
+    latestPeriod: updatedAt,
     quotes,
+    range,
     sourceLabel: SOURCE_LABEL,
-    sourceUrl: WORLD_BANK_COMMODITY_PAGE_URL,
-    updatedAt: parseWorkbookUpdatedAt(String(sheet.getCell("A4").text || "")),
+    sourceUrl: SOURCE_URL,
+    updatedAt,
   } satisfies CommodityMarketSnapshot;
 }
 
-export async function getCommodityMarketSnapshot() {
+export function isCommodityMarketRange(value: string): value is CommodityMarketRange {
+  return value in RANGE_CONFIG;
+}
+
+export async function getCommodityMarketSnapshot(range: CommodityMarketRange = "1d") {
   const now = Date.now();
-  if (cache && cache.expiresAt > now) {
-    return cache.snapshot;
-  }
+  const cached = cache.get(range);
+  if (cached && cached.expiresAt > now) return cached.snapshot;
 
   try {
-    const snapshot = await readWorkbookSnapshot();
-    cache = {
+    const snapshot = await readMarketSnapshot(range);
+    cache.set(range, {
       expiresAt: now + CACHE_TTL_MS,
       snapshot,
       staleUntil: now + STALE_CACHE_TTL_MS,
-    };
+    });
     return snapshot;
   } catch (error) {
-    if (cache && cache.staleUntil > now) {
-      return cache.snapshot;
-    }
-
+    if (cached && cached.staleUntil > now) return cached.snapshot;
     throw error;
   }
 }

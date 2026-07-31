@@ -71,8 +71,9 @@ export interface WeatherSnapshot {
   windSpeedKmh: number;
 }
 
-export type CommodityMarketGroup = 'energy' | 'oils' | 'food';
+export type CommodityMarketGroup = 'indices' | 'energy' | 'metals' | 'food';
 export type CommodityMarketTrend = 'up' | 'down' | 'flat';
+export type CommodityMarketRange = '1d' | '5d' | '1mo' | '6mo' | '1y' | '5y';
 
 export interface CommodityMarketPoint {
   period: string;
@@ -80,22 +81,34 @@ export interface CommodityMarketPoint {
 }
 
 export interface CommodityMarketQuote {
+  change: number | null;
   changePercent: number | null;
+  currency: string;
+  dayHigh: number | null;
+  dayLow: number | null;
+  exchange: string;
+  fiftyTwoWeekHigh: number | null;
+  fiftyTwoWeekLow: number | null;
   group: CommodityMarketGroup;
   history: CommodityMarketPoint[];
   id: string;
   label: string;
+  marketOpen: boolean;
+  marketTime: string;
   previousValue: number | null;
   shortLabel: string;
+  symbol: string;
   trend: CommodityMarketTrend;
   unit: string;
   value: number;
+  volume: number | null;
 }
 
 export interface CommodityMarketSnapshot {
   frequencyLabel: string;
   latestPeriod: string;
   quotes: CommodityMarketQuote[];
+  range: CommodityMarketRange;
   sourceLabel: string;
   sourceUrl: string;
   updatedAt: string;

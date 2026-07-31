@@ -1,4 +1,7 @@
-import { getCommodityMarketSnapshot } from "./_lib/commodity-markets.js";
+import {
+  getCommodityMarketSnapshot,
+  isCommodityMarketRange,
+} from "./_lib/commodity-markets.js";
 import { enforceRequestPolicy, isBlockedRequestDecision } from "./_lib/request-security.js";
 
 function buildJsonResponse(payload: unknown, init?: ResponseInit) {
@@ -35,11 +38,17 @@ export default async function handler(request: any, response?: any) {
   }
 
   try {
-    const snapshot = await getCommodityMarketSnapshot();
+    const requestUrl = new URL(request?.url ?? "/api/markets", "https://baky-news.vercel.app");
+    const rawQueryRange = Array.isArray(request?.query?.range)
+      ? request.query.range[0]
+      : request?.query?.range ?? requestUrl.searchParams.get("range") ?? "1d";
+    const queryRange = String(rawQueryRange);
+    const range = isCommodityMarketRange(queryRange) ? queryRange : "1d";
+    const snapshot = await getCommodityMarketSnapshot(range);
     return sendJson(response, snapshot, 200, {
       ...decision.headers,
-      "Cache-Control": "public, max-age=1800, s-maxage=21600, stale-while-revalidate=86400",
-      "X-Baky-Markets-Source": "world-bank-pink-sheet",
+      "Cache-Control": "public, max-age=15, s-maxage=30, stale-while-revalidate=600",
+      "X-Baky-Markets-Source": "yahoo-finance-chart",
     });
   } catch (error) {
     console.error("Markets handler failed:", error);

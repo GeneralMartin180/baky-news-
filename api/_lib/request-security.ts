@@ -71,7 +71,6 @@ const POLICY_CONFIG: Record<RequestPolicy, PolicyConfig> = {
     windowMs: 15 * 60 * 1000,
   },
   markets: {
-    cooldownMs: 2000,
     max: 120,
     windowMs: 15 * 60 * 1000,
   },
