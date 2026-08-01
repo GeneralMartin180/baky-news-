@@ -18,6 +18,9 @@ type YahooChartResult = {
   indicators?: {
     quote?: Array<{
       close?: Array<number | null>;
+      high?: Array<number | null>;
+      low?: Array<number | null>;
+      open?: Array<number | null>;
       volume?: Array<number | null>;
     }>;
   };
@@ -90,16 +93,21 @@ function getMarketOpen(meta: Record<string, unknown>) {
 
 function buildHistory(result: YahooChartResult): CommodityMarketPoint[] {
   const timestamps = result.timestamp ?? [];
-  const closes = result.indicators?.quote?.[0]?.close ?? [];
+  const quote = result.indicators?.quote?.[0];
+  const closes = quote?.close ?? [];
 
   return timestamps
     .map<CommodityMarketPoint | null>((timestamp, index) => {
       const value = finiteNumber(closes[index]);
       if (value === null) return null;
       return {
+        close: value,
+        high: finiteNumber(quote?.high?.[index]) ?? value,
+        low: finiteNumber(quote?.low?.[index]) ?? value,
+        open: finiteNumber(quote?.open?.[index]) ?? value,
         period: new Date(timestamp * 1000).toISOString(),
         value: round(value),
-        volume: finiteNumber(result.indicators?.quote?.[0]?.volume?.[index]),
+        volume: finiteNumber(quote?.volume?.[index]),
       };
     })
     .filter((point): point is CommodityMarketPoint => point !== null);

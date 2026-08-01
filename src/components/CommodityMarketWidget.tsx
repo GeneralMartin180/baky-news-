@@ -1,9 +1,11 @@
-import { PointerEvent, useEffect, useMemo, useState } from 'react';
+import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   ArrowDownRight,
   ArrowUpRight,
+  ChartCandlestick,
   ChartColumnBig,
+  ChartSpline,
   Clock3,
   ExternalLink,
   Flame,
@@ -55,6 +57,8 @@ const RANGES: Array<{ id: CommodityMarketRange; label: string }> = [
   { id: '5y', label: '5R' },
   { id: 'max', label: 'MAX' },
 ];
+
+type CommodityChartMode = 'line' | 'candles';
 
 function formatPrice(value: number) {
   const maximumFractionDigits = value >= 1000 ? 2 : value >= 100 ? 2 : value >= 10 ? 3 : 4;
@@ -117,55 +121,122 @@ function TrendIcon({ quote, className = 'h-3.5 w-3.5' }: { quote: CommodityMarke
   return <Icon className={className} />;
 }
 
-function getChartData(quote: CommodityMarketQuote, width: number, height: number, compact: boolean) {
-  const values = quote.history.map((point) => point.value);
-  const rawMin = Math.min(...values);
-  const rawMax = Math.max(...values);
+function aggregateCandles(quote: CommodityMarketQuote, maximumPoints: number) {
+  const bucketSize = Math.max(1, Math.ceil(quote.history.length / maximumPoints));
+
+  return Array.from({ length: Math.ceil(quote.history.length / bucketSize) }, (_, bucketIndex) => {
+    const bucket = quote.history.slice(bucketIndex * bucketSize, (bucketIndex + 1) * bucketSize);
+    const first = bucket[0];
+    const last = bucket[bucket.length - 1];
+    const open = first.open ?? first.value;
+    const close = last.close ?? last.value;
+    const volumes = bucket.map((point) => point.volume).filter((value): value is number => value !== null && value !== undefined);
+
+    return {
+      close,
+      high: Math.max(...bucket.map((point) => point.high ?? point.value), open, close),
+      low: Math.min(...bucket.map((point) => point.low ?? point.value), open, close),
+      open,
+      period: last.period,
+      value: close,
+      volume: volumes.length ? volumes.reduce((sum, value) => sum + value, 0) : null,
+    };
+  });
+}
+
+function getChartData(
+  quote: CommodityMarketQuote,
+  width: number,
+  height: number,
+  compact: boolean,
+  mode: CommodityChartMode
+) {
+  const maximumCandles = Math.max(18, Math.min(compact ? 48 : 90, Math.floor(width / (compact ? 7 : 9))));
+  const history = mode === 'candles' ? aggregateCandles(quote, maximumCandles) : quote.history;
+  const lows = history.map((point) => mode === 'candles' ? point.low ?? point.value : point.value);
+  const highs = history.map((point) => mode === 'candles' ? point.high ?? point.value : point.value);
+  const values = history.map((point) => point.close ?? point.value);
+  const rawMin = Math.min(...lows);
+  const rawMax = Math.max(...highs);
   const padding = Math.max((rawMax - rawMin) * 0.12, rawMax * 0.002, 0.01);
   const min = rawMin - padding;
   const max = rawMax + padding;
-  const range = max - min || 1;
+  const valueRange = max - min || 1;
   const priceHeight = compact ? height : height * 0.76;
-  const points = quote.history.map((point, index) => ({
+  const plotWidth = compact ? width : Math.max(width - 54, 1);
+  const points = history.map((point, index) => ({
+    close: point.close ?? point.value,
+    closeY: priceHeight - (((point.close ?? point.value) - min) / valueRange) * priceHeight,
+    high: point.high ?? point.value,
+    highY: priceHeight - (((point.high ?? point.value) - min) / valueRange) * priceHeight,
+    low: point.low ?? point.value,
+    lowY: priceHeight - (((point.low ?? point.value) - min) / valueRange) * priceHeight,
+    open: point.open ?? point.value,
+    openY: priceHeight - (((point.open ?? point.value) - min) / valueRange) * priceHeight,
     period: point.period,
-    value: point.value,
+    value: point.close ?? point.value,
     volume: point.volume ?? null,
-    x: (index / Math.max(quote.history.length - 1, 1)) * width,
-    y: priceHeight - ((point.value - min) / range) * priceHeight,
+    x: mode === 'candles'
+      ? ((index + 0.5) / Math.max(history.length, 1)) * plotWidth
+      : (index / Math.max(history.length - 1, 1)) * plotWidth,
+    y: priceHeight - (((point.close ?? point.value) - min) / valueRange) * priceHeight,
   }));
   const linePath = points.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ');
-  const areaPath = `${linePath} L ${width} ${priceHeight} L 0 ${priceHeight} Z`;
+  const areaPath = `${linePath} L ${plotWidth} ${priceHeight} L 0 ${priceHeight} Z`;
   const averagePoints = points
     .map((point, index) => {
       if (index < 19) return null;
       const average = values.slice(index - 19, index + 1).reduce((sum, value) => sum + value, 0) / 20;
-      return { x: point.x, y: priceHeight - ((average - min) / range) * priceHeight };
+      return { x: point.x, y: priceHeight - ((average - min) / valueRange) * priceHeight };
     })
     .filter((point): point is { x: number; y: number } => point !== null);
   const averagePath = averagePoints.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ');
   const maxVolume = Math.max(...points.map((point) => point.volume ?? 0), 1);
-  return { areaPath, averagePath, linePath, max, maxVolume, min, points, priceHeight };
+  const candleWidth = Math.max(2, Math.min(compact ? 7 : 10, (plotWidth / Math.max(points.length, 1)) * 0.64));
+  return { areaPath, averagePath, candleWidth, linePath, max, maxVolume, min, plotWidth, points, priceHeight };
 }
 
 function MarketChart({
   compact = false,
+  mode,
   quote,
   range,
   showAverage = false,
 }: {
   compact?: boolean;
+  mode: CommodityChartMode;
   quote: CommodityMarketQuote;
   range: CommodityMarketRange;
   showAverage?: boolean;
 }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const width = compact ? 420 : 840;
-  const height = compact ? 120 : 310;
-  const chart = useMemo(() => getChartData(quote, width, height, compact), [compact, height, quote, width]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ height: compact ? 128 : 310, width: compact ? 420 : 840 });
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateDimensions = () => {
+      const nextWidth = Math.max(Math.round(container.clientWidth), 1);
+      const nextHeight = Math.max(Math.round(container.clientHeight), 1);
+      setDimensions((current) => current.width === nextWidth && current.height === nextHeight
+        ? current
+        : { height: nextHeight, width: nextWidth });
+    };
+
+    updateDimensions();
+    const observer = new ResizeObserver(updateDimensions);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [compact]);
+
+  const { height, width } = dimensions;
+  const chart = useMemo(() => getChartData(quote, width, height, compact, mode), [compact, height, mode, quote, width]);
   const colors = getTrendClasses(quote);
   const chartColor = compact ? colors.fill : '#0088cc';
   const hoveredPoint = hoveredIndex === null ? null : chart.points[hoveredIndex];
-  const gradientId = `market-area-${quote.id}-${range}-${compact ? 'small' : 'large'}`;
+  const gradientId = `market-area-${quote.id}-${range}-${mode}-${compact ? 'small' : 'large'}`;
 
   const handlePointerMove = (event: PointerEvent<SVGSVGElement>) => {
     if (compact) return;
@@ -175,12 +246,13 @@ function MarketChart({
   };
 
   return (
-    <div className={cn('relative w-full', compact ? 'h-28' : 'h-[290px] sm:h-[360px]')}>
+    <div ref={containerRef} className={cn('relative w-full overflow-hidden', compact ? 'h-32 sm:h-28' : 'h-[260px] sm:h-[360px]')}>
       <svg
         aria-label={`Vývoj ceny ${quote.label}`}
-        className="h-full w-full touch-pan-y overflow-visible"
+        className="h-full w-full touch-pan-y"
         onPointerLeave={() => setHoveredIndex(null)}
         onPointerMove={handlePointerMove}
+        preserveAspectRatio="none"
         role="img"
         viewBox={`0 0 ${width} ${height}`}
       >
@@ -198,11 +270,11 @@ function MarketChart({
                   stroke="#e2e8f0"
                   strokeDasharray="3 5"
                   x1="0"
-                  x2={width}
+                  x2={chart.plotWidth}
                   y1={step * chart.priceHeight}
                   y2={step * chart.priceHeight}
                 />
-                <text fill="#94a3b8" fontSize="11" textAnchor="end" x={width - 4} y={step * chart.priceHeight - 6}>
+                <text fill="#94a3b8" fontSize="11" x={chart.plotWidth + 7} y={Math.max(11, step * chart.priceHeight + 4)}>
                   {formatPrice(chart.max - step * (chart.max - chart.min))}
                 </text>
               </g>
@@ -212,7 +284,7 @@ function MarketChart({
         {!compact
           ? chart.points.map((point, index) => {
               const volumeHeight = ((point.volume ?? 0) / chart.maxVolume) * (height - chart.priceHeight - 12);
-              const barWidth = Math.max(1, width / Math.max(chart.points.length, 1) - 1);
+              const barWidth = Math.max(1, chart.plotWidth / Math.max(chart.points.length, 1) - 1);
               return (
                 <rect
                   fill={index && point.value < chart.points[index - 1].value ? '#ef4444' : '#10b981'}
@@ -227,25 +299,57 @@ function MarketChart({
             })
           : null}
 
-        <motion.path
-          animate={{ opacity: 1 }}
-          d={chart.areaPath}
-          fill={`url(#${gradientId})`}
-          initial={{ opacity: 0 }}
-          transition={{ duration: 0.45 }}
-        />
-        <motion.path
-          animate={{ opacity: 1, pathLength: 1 }}
-          d={chart.linePath}
-          fill="none"
-          initial={{ opacity: 0.6, pathLength: 0 }}
-          key={`${quote.id}-${range}`}
-          stroke={chartColor}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={compact ? 3 : 2.5}
-          transition={{ duration: compact ? 0.55 : 0.8, ease: 'easeOut' }}
-        />
+        {mode === 'line' ? (
+          <>
+            <motion.path
+              animate={{ opacity: 1 }}
+              d={chart.areaPath}
+              fill={`url(#${gradientId})`}
+              initial={{ opacity: 0 }}
+              transition={{ duration: 0.45 }}
+            />
+            <motion.path
+              animate={{ opacity: 1, pathLength: 1 }}
+              d={chart.linePath}
+              fill="none"
+              initial={{ opacity: 0.6, pathLength: 0 }}
+              key={`${quote.id}-${range}-${mode}`}
+              stroke={chartColor}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={compact ? 3 : 2.5}
+              transition={{ duration: compact ? 0.55 : 0.8, ease: 'easeOut' }}
+            />
+          </>
+        ) : (
+          <motion.g
+            animate={{ opacity: 1 }}
+            initial={{ opacity: 0 }}
+            key={`${quote.id}-${range}-${mode}`}
+            transition={{ duration: 0.35 }}
+          >
+            {chart.points.map((point) => {
+              const rising = point.close >= point.open;
+              const color = rising ? '#059669' : '#dc2626';
+              const bodyTop = Math.min(point.openY, point.closeY);
+              const bodyHeight = Math.max(Math.abs(point.openY - point.closeY), 1.5);
+              return (
+                <g key={`candle-${point.period}`}>
+                  <line stroke={color} strokeWidth={compact ? 1.2 : 1.5} x1={point.x} x2={point.x} y1={point.highY} y2={point.lowY} />
+                  <rect
+                    fill={rising ? '#10b981' : '#ef4444'}
+                    height={bodyHeight}
+                    stroke={color}
+                    strokeWidth="1"
+                    width={chart.candleWidth}
+                    x={point.x - chart.candleWidth / 2}
+                    y={bodyTop}
+                  />
+                </g>
+              );
+            })}
+          </motion.g>
+        )}
 
         {!compact && showAverage && chart.averagePath ? (
           <motion.path
@@ -263,8 +367,8 @@ function MarketChart({
         {hoveredPoint ? (
           <g>
             <line stroke={chartColor} strokeDasharray="4 4" x1={hoveredPoint.x} x2={hoveredPoint.x} y1="0" y2={height} />
-            <circle cx={hoveredPoint.x} cy={hoveredPoint.y} fill="white" r="5" stroke={chartColor} strokeWidth="3" />
-            <g transform={`translate(${Math.min(Math.max(hoveredPoint.x - 62, 4), width - 128)} ${Math.max(hoveredPoint.y - 58, 4)})`}>
+            {mode === 'line' ? <circle cx={hoveredPoint.x} cy={hoveredPoint.y} fill="white" r="5" stroke={chartColor} strokeWidth="3" /> : null}
+            <g transform={`translate(${Math.min(Math.max(hoveredPoint.x - 62, 4), Math.max(chart.plotWidth - 128, 4))} ${Math.max(hoveredPoint.y - 58, 4)})`}>
               <rect fill="white" height="46" rx="6" stroke="#cbd5e1" width="124" />
               <text fill="#0f172a" fontSize="13" fontWeight="600" x="10" y="19">
                 {formatPrice(hoveredPoint.value)}
@@ -276,6 +380,43 @@ function MarketChart({
           </g>
         ) : null}
       </svg>
+    </div>
+  );
+}
+
+function ChartModeToggle({
+  compact = false,
+  mode,
+  onChange,
+}: {
+  compact?: boolean;
+  mode: CommodityChartMode;
+  onChange: (mode: CommodityChartMode) => void;
+}) {
+  const modes: Array<{ icon: typeof ChartSpline; id: CommodityChartMode; label: string }> = [
+    { icon: ChartSpline, id: 'line', label: 'Čiara' },
+    { icon: ChartCandlestick, id: 'candles', label: 'Sviečky' },
+  ];
+
+  return (
+    <div aria-label="Typ grafu" className="flex shrink-0 border border-slate-200 bg-slate-50 p-0.5" role="group">
+      {modes.map(({ icon: Icon, id, label }) => (
+        <button
+          aria-label={label}
+          aria-pressed={mode === id}
+          className={cn(
+            'news-pressable flex h-7 items-center justify-center gap-1.5 px-2 text-[11px] font-semibold transition-colors',
+            mode === id ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+          )}
+          key={id}
+          onClick={() => onChange(id)}
+          title={label}
+          type="button"
+        >
+          <Icon className="h-3.5 w-3.5" />
+          <span className={compact ? 'sr-only' : ''}>{label}</span>
+        </button>
+      ))}
     </div>
   );
 }
@@ -326,7 +467,19 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapshot; onClose: () => void; open: boolean }) {
+function MarketModal({
+  chartMode,
+  market,
+  onChartModeChange,
+  onClose,
+  open,
+}: {
+  chartMode: CommodityChartMode;
+  market: CommodityMarketSnapshot;
+  onChartModeChange: (mode: CommodityChartMode) => void;
+  onClose: () => void;
+  open: boolean;
+}) {
   const [activeGroup, setActiveGroup] = useState<CommodityMarketGroup | 'all'>('all');
   const [activeMarket, setActiveMarket] = useState(market);
   const [range, setRange] = useState<CommodityMarketRange>('1d');
@@ -499,9 +652,10 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
                     </div>
                   </div>
 
-                  <div className="mt-6 flex items-center justify-between border-b border-slate-200 pb-2">
-                    <div className="flex items-center gap-4 text-[11px] font-medium text-slate-500">
-                      <span className="flex items-center gap-1.5"><span className="h-0.5 w-5 bg-sky-600" /> CENA</span>
+                  <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                    <div className="flex items-center gap-3 text-[11px] font-medium text-slate-500">
+                      <ChartModeToggle mode={chartMode} onChange={onChartModeChange} />
+                      <span className="hidden items-center gap-1.5 sm:flex"><span className="h-0.5 w-5 bg-sky-600" /> CENA</span>
                       <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 bg-emerald-500/40" /> OBJEM</span>
                     </div>
                     <button
@@ -522,7 +676,7 @@ function MarketModal({ market, onClose, open }: { market: CommodityMarketSnapsho
                         <LoaderCircle className="h-6 w-6 animate-spin text-sky-600" />
                       </div>
                     ) : null}
-                    <MarketChart quote={selectedQuote} range={range} showAverage={showAverage} />
+                    <MarketChart mode={chartMode} quote={selectedQuote} range={range} showAverage={showAverage} />
                   </div>
 
                   <div className="mt-6 grid gap-x-8 md:grid-cols-[minmax(0,1fr)_280px]">
@@ -566,6 +720,7 @@ export function CommodityMarketWidget({
   market,
 }: CommodityMarketWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [chartMode, setChartMode] = useState<CommodityChartMode>('line');
   const featuredQuote = market?.quotes.find((quote) => quote.id === 'wti') ?? market?.quotes[0] ?? null;
   const highlights = market?.quotes.filter((quote) => ['wti', 'brent', 'gold', 'wheat'].includes(quote.id)) ?? [];
 
@@ -612,15 +767,18 @@ export function CommodityMarketWidget({
             </div>
             <p className="mt-0.5 text-[11px] text-slate-500">Energia, kovy a potraviny</p>
           </div>
-          <button
-            aria-label="Otvoriť detail burzy"
-            className="news-pressable flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-            onClick={() => setIsOpen(true)}
-            title="Otvoriť detail"
-            type="button"
-          >
-            <Maximize2 className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <ChartModeToggle compact mode={chartMode} onChange={setChartMode} />
+            <button
+              aria-label="Otvoriť detail burzy"
+              className="news-pressable flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              onClick={() => setIsOpen(true)}
+              title="Otvoriť detail"
+              type="button"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 border-b border-slate-200 bg-white lg:grid-cols-4">
@@ -648,7 +806,7 @@ export function CommodityMarketWidget({
             </span>
           </div>
           <div className="mt-2">
-            <MarketChart compact quote={featuredQuote} range={market.range} />
+            <MarketChart compact mode={chartMode} quote={featuredQuote} range={market.range} />
           </div>
         </button>
 
@@ -661,7 +819,13 @@ export function CommodityMarketWidget({
         </div>
       </motion.section>
 
-      <MarketModal market={market} onClose={() => setIsOpen(false)} open={isOpen} />
+      <MarketModal
+        chartMode={chartMode}
+        market={market}
+        onChartModeChange={setChartMode}
+        onClose={() => setIsOpen(false)}
+        open={isOpen}
+      />
     </>
   );
 }

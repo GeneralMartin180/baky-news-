@@ -76,6 +76,10 @@ export type CommodityMarketTrend = 'up' | 'down' | 'flat';
 export type CommodityMarketRange = '1d' | '5d' | '1mo' | '6mo' | 'ytd' | '1y' | '5y' | 'max';
 
 export interface CommodityMarketPoint {
+  close?: number;
+  high?: number;
+  low?: number;
+  open?: number;
   period: string;
   value: number;
   volume?: number | null;
