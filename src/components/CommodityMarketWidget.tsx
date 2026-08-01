@@ -7,6 +7,7 @@ import {
   ChartColumnBig,
   ChartSpline,
   Clock3,
+  ChevronDown,
   ExternalLink,
   Flame,
   Gem,
@@ -246,7 +247,7 @@ function MarketChart({
   };
 
   return (
-    <div ref={containerRef} className={cn('relative w-full overflow-hidden', compact ? 'h-32 sm:h-28' : 'h-[260px] sm:h-[360px]')}>
+    <div ref={containerRef} className={cn('relative w-full overflow-hidden', compact ? 'h-32 sm:h-28' : 'h-[200px] sm:h-[360px]')}>
       <svg
         aria-label={`Vývoj ceny ${quote.label}`}
         className="h-full w-full touch-pan-y"
@@ -639,14 +640,14 @@ function MarketModal({
                         <span>·</span>
                         <MarketStatus quote={selectedQuote} />
                       </div>
-                      <h3 className="mt-2 text-xl font-semibold text-slate-950 sm:text-2xl">{selectedQuote.label}</h3>
-                      <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-1">
-                        <span className="text-3xl font-semibold tabular-nums text-slate-950 sm:text-5xl">
+                  <h3 className="mt-2 text-lg font-semibold text-slate-950 sm:text-2xl">{selectedQuote.label}</h3>
+                  <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-1">
+                        <span className="text-2xl font-semibold tabular-nums text-slate-950 sm:text-5xl">
                           {formatPrice(selectedQuote.value)}
                         </span>
                         <span className="pb-1 text-sm font-medium text-slate-500">{selectedQuote.currency}</span>
                       </div>
-                      <div className={cn('mt-2 flex min-w-0 flex-wrap items-center gap-2 text-sm font-semibold tabular-nums', colors.text)}>
+                      <div className={cn('mt-2 flex min-w-0 flex-wrap items-center gap-2 text-xs font-semibold tabular-nums sm:text-sm', colors.text)}>
                         <TrendIcon className="h-4 w-4" quote={selectedQuote} />
                         {formatSigned(selectedQuote.change)} ({formatPercent(selectedQuote.changePercent)})
                         <span className="font-normal text-slate-400">{activeMarket.frequencyLabel}</span>
@@ -696,8 +697,8 @@ function MarketModal({
                     <MarketChart mode={chartMode} quote={selectedQuote} range={range} showAverage={showAverage} />
                   </div>
 
-                  <div className="mt-6 grid gap-x-8 md:grid-cols-[minmax(0,1fr)_280px]">
-                    <div>
+                  <div className="mt-5 grid gap-x-8 md:grid-cols-[minmax(0,1fr)_280px]">
+                    <div className="hidden sm:block">
                       <h4 className="text-sm font-semibold text-slate-950">Vývoj trhu</h4>
                       <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
                         Za obdobie {activeMarket.frequencyLabel.toLowerCase()} sa {selectedQuote.shortLabel}{' '}
@@ -709,7 +710,7 @@ function MarketModal({
                         Trhové údaje môžu byť oneskorené. Futures ceny sa môžu líšiť od spotových cien komodít.
                       </div>
                     </div>
-                    <div className="mt-6 md:mt-0">
+                    <div className="mt-0">
                       <h4 className="border-b-2 border-sky-600 pb-2 text-sm font-semibold uppercase text-slate-950">Kľúčové dáta</h4>
                       <dl className="grid min-w-0 grid-cols-1 gap-x-4 min-[380px]:grid-cols-2 md:block">
                       <Stat label="Predchádzajúca hodnota" value={selectedQuote.previousValue === null ? '—' : formatPrice(selectedQuote.previousValue)} />
@@ -719,6 +720,24 @@ function MarketModal({
                       </dl>
                     </div>
                   </div>
+
+                  <details className="group mt-4 border border-slate-200 bg-slate-50 p-3 sm:hidden">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-slate-950 [&::-webkit-details-marker]:hidden">
+                      <span>Vývoj trhu</span>
+                      <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                      <p className="text-sm leading-6 text-slate-600">
+                        Za obdobie {activeMarket.frequencyLabel.toLowerCase()} sa {selectedQuote.shortLabel}{' '}
+                        {selectedQuote.trend === 'up' ? 'posunul vyššie' : selectedQuote.trend === 'down' ? 'oslabil' : 'výrazne nezmenil'} o{' '}
+                        {formatPercent(selectedQuote.changePercent)}. Graf zobrazuje obchodné ceny, nie investičné odporúčanie.
+                      </p>
+                      <div className="flex items-start gap-2 border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+                        <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                        Trhové údaje môžu byť oneskorené. Futures ceny sa môžu líšiť od spotových cien komodít.
+                      </div>
+                    </div>
+                  </details>
                 </div>
               </main>
             </div>
