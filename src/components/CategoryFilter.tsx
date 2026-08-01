@@ -14,10 +14,10 @@ const categories: Array<{
   mobileLabel: string;
   icon: typeof Newspaper;
 }> = [
-  { id: 'general', label: 'Hlavne spravy', mobileLabel: 'Hlavne', icon: Newspaper },
-  { id: 'technology', label: 'Technologie', mobileLabel: 'Tech', icon: Cpu },
+  { id: 'general', label: 'Hlavné správy', mobileLabel: 'Hlavné', icon: Newspaper },
+  { id: 'technology', label: 'Technológie', mobileLabel: 'Tech', icon: Cpu },
   { id: 'business', label: 'Biznis', mobileLabel: 'Biznis', icon: BarChart3 },
-  { id: 'sports', label: 'Sport', mobileLabel: 'Sport', icon: Trophy },
+  { id: 'sports', label: 'Šport', mobileLabel: 'Šport', icon: Trophy },
   { id: 'science', label: 'Veda', mobileLabel: 'Veda', icon: Beaker },
 ];
 

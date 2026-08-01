@@ -196,37 +196,37 @@ export const DESK_WATCHLISTS: DeskWatchlistOption[] = [
   {
     id: 'slovakia',
     label: 'Slovensko',
-    description: 'Vlada, politici, mesta a lokalny dopad.',
+    description: 'Vláda, politici, mestá a lokálny dopad.',
     keywords: ['bratislava', 'fico', 'kosice', 'presov', 'rimavska', 'slovak', 'slovensko'],
   },
   {
     id: 'markets',
-    label: 'Markets',
-    description: 'Trhy, firmy, inflacia, sadzby a velke vysledky.',
+    label: 'Trhy',
+    description: 'Trhy, firmy, inflácia, sadzby a veľké výsledky.',
     keywords: ['bank', 'business', 'earnings', 'inflation', 'market', 'rates', 'stocks'],
   },
   {
     id: 'ai',
     label: 'AI',
-    description: 'Modely, cipy, platformy a AI firmy.',
+    description: 'Modely, čipy, platformy a AI firmy.',
     keywords: ['ai', 'chip', 'model', 'nvidia', 'openai', 'robot', 'startup'],
   },
   {
     id: 'security',
-    label: 'Security',
-    description: 'Kyber, konflikty, utoky a obrana.',
+    label: 'Bezpečnosť',
+    description: 'Kyber, konflikty, útoky a obrana.',
     keywords: ['attack', 'cyber', 'defense', 'hack', 'security', 'ukraine', 'war'],
   },
   {
     id: 'energy',
-    label: 'Energy',
-    description: 'Ropa, plyn, elektrina a energeticke firmy.',
+    label: 'Energia',
+    description: 'Ropa, plyn, elektrina a energetické firmy.',
     keywords: ['electricity', 'energy', 'gas', 'nuclear', 'oil', 'power', 'ropa'],
   },
   {
     id: 'regions',
-    label: 'Regions',
-    description: 'Regiony, samosprava a lokalne sluzby.',
+    label: 'Regióny',
+    description: 'Regióny, samospráva a lokálne služby.',
     keywords: ['lokal', 'regional', 'rimavska', 'sobota', 'vychod', 'mesto', 'obec'],
   },
 ];
@@ -291,13 +291,13 @@ export function getSourceTrust(sourceName: string): DeskTrustLevel {
 export function getSourceTrustLabel(trust: DeskTrustLevel) {
   switch (trust) {
     case 'trusted':
-      return 'Trusted';
+      return 'Dôveryhodný';
     case 'regional':
-      return 'Regional';
+      return 'Regionálny';
     case 'low-signal':
-      return 'Low signal';
+      return 'Slabý signál';
     default:
-      return 'Mixed';
+      return 'Zmiešaný';
   }
 }
 
@@ -353,13 +353,13 @@ export function getImpactLevel(
 export function getImpactLabel(impact: DeskImpactLevel) {
   switch (impact) {
     case 'local':
-      return 'Local';
+      return 'Lokálne';
     case 'market':
-      return 'Market';
+      return 'Trhy';
     case 'watch':
-      return 'Watchlist';
+      return 'Sledovanie';
     default:
-      return 'High impact';
+      return 'Vysoký dopad';
   }
 }
 
@@ -409,7 +409,7 @@ export function buildExecutiveBrief(
 ): DeskExecutiveBrief {
   const nowHour = new Date().getHours();
   const phase =
-    nowHour < 11 ? 'Ranny briefing' : nowHour < 17 ? 'Denny update' : 'Vecerny wrap';
+    nowHour < 11 ? 'Ranný brief' : nowHour < 17 ? 'Denná aktualizácia' : 'Večerný súhrn';
   const sample = articles.slice(0, 5);
   const topEntities = unique(sample.flatMap((article) => getDeskEntities(article))).slice(0, 4);
   const impactHeavy = sample.filter((article) =>
@@ -433,8 +433,8 @@ export function buildExecutiveBrief(
   const topicsLine =
     editorial?.topTopics?.slice(0, 3).join(', ') ||
     topEntities.join(', ') ||
-    'bez dominantnej temy';
-  const summary = `${impactHeavy} high-impact signalov, ${watchHits} watchlist hitov, fokus na ${topicsLine}.`;
+    'bez dominantnej témy';
+  const summary = `${impactHeavy} signálov s vysokým dopadom, ${watchHits} hitov sledovania, fokus na ${topicsLine}.`;
   const clipboardText = [
     phase,
     summary,
@@ -446,7 +446,7 @@ export function buildExecutiveBrief(
     headline: phase,
     points,
     subheadline: summary,
-    title: activeWatchlistIds.length > 0 ? 'Executive watchbrief' : 'Executive brief',
+    title: activeWatchlistIds.length > 0 ? 'Manažérsky sledovací prehľad' : 'Manažérsky prehľad',
   };
 }
 

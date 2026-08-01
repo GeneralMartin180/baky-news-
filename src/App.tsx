@@ -201,8 +201,8 @@ const feedViewOptions: Array<{
   id: FeedView;
   label: string;
 }> = [
-  { icon: Newspaper, id: 'top', label: 'Hlavný' },
-  { icon: Sparkles, id: 'for-you', label: 'For You' },
+  { icon: Newspaper, id: 'top', label: 'Hlavné správy' },
+  { icon: Sparkles, id: 'for-you', label: 'Pre teba' },
   { icon: Bookmark, id: 'saved', label: 'Uložené' },
 ];
 
@@ -839,8 +839,8 @@ function EditorialPanel({ briefing, localEdition }: EditorialPanelProps) {
           </div>
 
           <div className="rounded-lg border border-slate-200/80 bg-white px-4 py-3.5">
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
-              Watchlist
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
+              Sledované
             </p>
             <div className="mt-2.5 space-y-1.5">
               {briefing.watchlist.map((item) => (
@@ -862,7 +862,7 @@ function buildFeedMeta(category: Category, searchQuery: string) {
       kicker: 'Vyhľadávanie',
       title: `Výsledky pre „${searchQuery}“`,
       description:
-        'Prehľad článkov z viacerých zdrojov doplnený o základný kontext a čitateľný briefing.',
+        'Prehľad článkov z viacerých zdrojov doplnený o základný kontext a čitateľný brífing.',
     };
   }
 
@@ -873,7 +873,7 @@ function buildActiveFeedMeta(category: Category, searchQuery: string, feedView: 
   if (feedView === 'for-you' && !searchQuery) {
     return {
       kicker: 'Personalizovaný výber',
-      title: 'For You feed',
+      title: 'Pre teba',
       description:
         'Články zoradené podľa toho, čo otváraš, ukladáš a označuješ ako dôležité.',
     };
@@ -884,7 +884,7 @@ function buildActiveFeedMeta(category: Category, searchQuery: string, feedView: 
       kicker: 'Uložené články',
       title: 'Čítaj neskôr',
       description:
-        'Tvoj súkromný zoznam článkov v tomto prehliadači bez účtu a bez subscription vrstvy.',
+        'Tvoj súkromný zoznam článkov v tomto prehliadači bez účtu a bez predplatného.',
     };
   }
 
@@ -1024,7 +1024,7 @@ function HabitPanel({
               : 'border-slate-200/80 bg-white text-slate-700 hover:border-slate-300'
           )}
         >
-          For You
+          Pre teba
         </button>
         <button
           type="button"
@@ -1712,12 +1712,12 @@ export default function App() {
               )}
               title={
                 signalMode
-                  ? 'Vypnúť Signal Mode a zobraziť všetky články'
-                  : 'Zapnúť Signal Mode a filtrovať clickbait'
+                  ? 'Vypnúť signálový režim a zobraziť všetky články'
+                  : 'Zapnúť signálový režim a filtrovať clickbait'
               }
             >
               <ShieldCheck className="h-4 w-4" />
-              Signal
+              Signál
             </button>
 
             <button
@@ -1793,11 +1793,11 @@ export default function App() {
 
         {isLoading ? (
           <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
-            <LoadingIndicator ariaLabel="Nacitavam spravy" />
+            <LoadingIndicator ariaLabel="Načítavam správy" />
             <div className="text-center">
               <p className="text-base font-medium text-slate-900">Načítavam správy</p>
               <p className="mt-1 text-sm text-slate-500">
-                Zoraďujem feed a pripravujem briefing.
+                Zoraďujem správy a pripravujem brífing.
               </p>
             </div>
           </div>
@@ -1874,7 +1874,7 @@ export default function App() {
                     <div className="flex items-center justify-between rounded-lg border border-slate-200/80 bg-white px-3 py-2.5">
                       <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-800">
                         <ShieldCheck className="h-4 w-4 text-sky-700" />
-                        Signal
+                        Signál
                       </span>
                       <button
                         type="button"
@@ -1886,7 +1886,7 @@ export default function App() {
                             : 'border-slate-300 bg-slate-200'
                         )}
                         aria-pressed={signalMode}
-                        aria-label="Signal Mode"
+                        aria-label="Signálový režim"
                       >
                         <span
                           className={cn(
@@ -2099,7 +2099,7 @@ export default function App() {
                         Rýchly briefing
                       </p>
                       <h3 className="mt-1 text-base font-semibold text-slate-950 sm:mt-2 sm:text-lg">
-                        Top stories
+                        Hlavné správy
                       </h3>
                     </div>
                     <Zap className="h-4 w-4 text-sky-700" />
@@ -2123,14 +2123,14 @@ export default function App() {
 
                 <section className="news-soft-shadow rounded-lg border border-slate-200/80 bg-white/85 p-3 sm:p-5">
                   <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500 sm:text-xs sm:tracking-[0.16em]">
-                    Feed controls
+                    Ovládanie feedu
                   </p>
 
                   <div className="mt-2.5 space-y-2.5 sm:mt-4 sm:space-y-4">
                     <div className="flex items-center justify-between gap-2.5 rounded-md border border-slate-200/70 bg-slate-50/70 px-2.5 py-2 sm:items-start sm:gap-4 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
                       <div>
                         <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-950 sm:text-sm sm:normal-case sm:tracking-normal">
-                          Signal<span className="hidden sm:inline"> Mode</span>
+                          Signál<span className="hidden sm:inline">ový režim</span>
                         </h3>
                         <p className="mt-1 hidden text-sm leading-6 text-slate-500 sm:block">
                           Filtrovanie titulkov s bulvárnym tónom a slabších zdrojov.

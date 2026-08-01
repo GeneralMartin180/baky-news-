@@ -34,8 +34,8 @@ const reactionOptions: Array<{
   id: ArticleReaction;
   label: string;
 }> = [
-  { icon: ThumbsUp, id: 'important', label: 'Dolezite' },
-  { icon: Target, id: 'track', label: 'Sledovat' },
+  { icon: ThumbsUp, id: 'important', label: 'Dôležité' },
+  { icon: Target, id: 'track', label: 'Sledovať' },
   { icon: ThumbsDown, id: 'less', label: 'Menej' },
 ];
 
@@ -171,14 +171,14 @@ export function ArticleModal({
 
       const response = await fetch(requestUrl.toString());
       if (!response.ok) {
-        throw new Error('Nepodarilo sa nacitat obsah');
+        throw new Error('Nepodarilo sa načítať obsah');
       }
 
       const data = await response.json();
       setFullContent(data.content || null);
     } catch (fetchError) {
       console.error(fetchError);
-      setError('Nepodarilo sa nacitat plny text clanku. Clanok si vsak mozete otvorit na povodnom zdroji.');
+      setError('Nepodarilo sa načítať plný text článku. Článok si však môžete otvoriť na pôvodnom zdroji.');
     } finally {
       setIsLoading(false);
     }
@@ -422,8 +422,8 @@ export function ArticleModal({
                   onClick={() => onToggleSave(article)}
                   className="news-pressable inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 sm:h-auto sm:w-auto sm:gap-2 sm:px-4 sm:py-2 sm:text-sm sm:font-medium"
                   aria-pressed={isSaved}
-                  aria-label={isSaved ? 'Odobrat z ulozenych' : 'Ulozit clanok'}
-                  title={isSaved ? 'Odobrat z ulozenych' : 'Ulozit clanok'}
+                  aria-label={isSaved ? 'Odobrať z uložených' : 'Uložiť článok'}
+                  title={isSaved ? 'Odobrať z uložených' : 'Uložiť článok'}
                 >
                   {isSaved ? (
                     <BookmarkCheck className="h-4 w-4" />
@@ -440,7 +440,7 @@ export function ArticleModal({
                 className="news-pressable hidden items-center gap-2 rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:border-slate-300 hover:bg-slate-50 sm:inline-flex"
               >
                 <ExternalLink className="h-4 w-4" />
-                Povodny zdroj
+                  Pôvodný zdroj
               </a>
               <button
                 type="button"
@@ -602,8 +602,8 @@ export function ArticleModal({
                   {speechError ? (
                     <p className="text-sm leading-6 text-rose-700">{speechError}</p>
                   ) : (
-                    <p className="text-sm leading-6 text-slate-500">
-                      PDF funguje priamo z modalu. Hlas precita titulok, zhrnutie a plny text, ak je dostupny.
+                  <p className="text-sm leading-6 text-slate-500">
+                      PDF funguje priamo z modalu. Hlas prečíta titulok, zhrnutie a plný text, ak je dostupný.
                     </p>
                   )}
                 </div>
@@ -612,8 +612,8 @@ export function ArticleModal({
               <div className="mt-8">
                 {isLoading ? (
                   <div className="news-soft-shadow flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-lg border border-slate-200/80 bg-slate-50">
-                    <LoadingIndicator ariaLabel="Nacitavam plny text clanku" />
-                    <p className="text-sm text-slate-500">Nacitavam plny text clanku</p>
+                    <LoadingIndicator ariaLabel="Načítavam plný text článku" />
+                    <p className="text-sm text-slate-500">Načítavam plný text článku</p>
                   </div>
                 ) : error ? (
                   <div className="rounded-lg border border-rose-200 bg-rose-50 px-5 py-4 text-sm leading-6 text-rose-700">
@@ -635,7 +635,7 @@ export function ArticleModal({
                   <div className="space-y-4">
                     <p className={bodyClassNames[fontSize]}>{article.description}</p>
                     <div className="rounded-lg border border-slate-200/80 bg-slate-50 px-5 py-4 text-[15px] leading-7 text-slate-600">
-                      Podrobnejsi obsah nie je k dispozicii. Otvorte originalny clanok pre plnu verziu.
+                      Podrobnejší obsah nie je k dispozícii. Otvorte originálny článok pre plnú verziu.
                     </div>
                   </div>
                 )}
@@ -649,7 +649,7 @@ export function ArticleModal({
                         Dalej citat
                       </p>
                       <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                        Suvisiace spravy
+                        Súvisiace správy
                       </h3>
                     </div>
                     <Newspaper className="h-4 w-4 text-sky-700" />
@@ -679,9 +679,9 @@ export function ArticleModal({
                 <div className="flex items-start gap-3">
                   <Globe className="mt-0.5 h-5 w-5 text-slate-400" />
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-950">Povodny zdroj</h3>
+                    <h3 className="text-sm font-semibold text-slate-950">Pôvodný zdroj</h3>
                     <p className="mt-1 text-sm leading-6 text-slate-500">
-                      Obrazky, video a kompletny kontext najdete na povodnej stranke clanku.
+                      Obrázky, video a kompletný kontext nájdete na pôvodnej stránke článku.
                     </p>
                     <a
                       href={article.url}
@@ -689,7 +689,7 @@ export function ArticleModal({
                       rel="noopener noreferrer"
                       className="news-pressable mt-4 inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-[0_12px_24px_-20px_rgba(15,23,42,0.9)] hover:bg-slate-800"
                     >
-                      Otvorit clanok
+                      Otvoriť článok
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   </div>

@@ -25,6 +25,21 @@ const digestModes: DeskDigestMode[] = ['feed', 'briefing', 'radar'];
 const sourceFilters: DeskSourceFilter[] = ['all', 'trusted', 'regional', 'mixed'];
 const readTimeFilters: DeskReadTimeFilter[] = ['all', 'quick', 'standard', 'deep'];
 
+const sourceFilterLabels: Record<DeskSourceFilter, string> = {
+  all: 'Všetko',
+  trusted: 'Dôveryhodné',
+  regional: 'Regionálne',
+  mixed: 'Zmiešané',
+  'low-signal': 'Slabý signál',
+};
+
+const readTimeFilterLabels: Record<DeskReadTimeFilter, string> = {
+  all: 'Všetko',
+  quick: 'Rýchle',
+  standard: 'Stredné',
+  deep: 'Detailné',
+};
+
 export function DeskRadarPanel({
   digestMode,
   focusedTopic,
@@ -42,7 +57,7 @@ export function DeskRadarPanel({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500 sm:text-xs">
-            Desk radar
+            Prehľad
           </p>
           <h3 className="mt-1 text-sm font-semibold text-slate-950 sm:text-base">Radar</h3>
         </div>
@@ -62,7 +77,7 @@ export function DeskRadarPanel({
                 : 'border-slate-200/80 bg-white text-slate-700 hover:border-slate-300'
             )}
           >
-            {mode}
+            {mode === 'feed' ? 'Prehľad' : mode === 'briefing' ? 'Brífing' : 'Radar'}
           </button>
         ))}
       </div>
@@ -71,7 +86,7 @@ export function DeskRadarPanel({
         <div>
           <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
             <ShieldCheck className="h-3.5 w-3.5" />
-            Source layer
+            Vrstva zdrojov
           </div>
           <div className="mt-2 flex min-w-0 flex-wrap gap-2">
             {sourceFilters.map((filter) => (
@@ -86,7 +101,7 @@ export function DeskRadarPanel({
                     : 'border-slate-200/80 bg-slate-50 text-slate-700 hover:border-slate-300'
                 )}
               >
-                {filter}
+                {sourceFilterLabels[filter]}
               </button>
             ))}
           </div>
@@ -95,7 +110,7 @@ export function DeskRadarPanel({
         <div>
           <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
             <Filter className="h-3.5 w-3.5" />
-            Read depth
+            Hĺbka čítania
           </div>
           <div className="mt-2 flex min-w-0 flex-wrap gap-2">
             {readTimeFilters.map((filter) => (
@@ -110,7 +125,7 @@ export function DeskRadarPanel({
                     : 'border-slate-200/80 bg-slate-50 text-slate-700 hover:border-slate-300'
                 )}
               >
-                {filter}
+                {readTimeFilterLabels[filter]}
               </button>
             ))}
           </div>
@@ -121,7 +136,7 @@ export function DeskRadarPanel({
         <div className="mt-3 flex min-w-0 items-center justify-between gap-2 rounded-lg border border-sky-100 bg-sky-50 px-3 py-2">
           <div className="min-w-0">
             <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700">
-              Topic focus
+              Zameranie témy
             </div>
             <div className="truncate text-sm font-semibold text-slate-950">{focusedTopic}</div>
           </div>
@@ -131,7 +146,7 @@ export function DeskRadarPanel({
             className="news-pressable inline-flex h-8 items-center gap-2 rounded-full border border-sky-200 bg-white px-3 text-sm font-medium text-sky-700"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            Reset
+            Vynulovať
           </button>
         </div>
       ) : null}
@@ -140,7 +155,7 @@ export function DeskRadarPanel({
         <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
         <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-2.5">
           <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-            Impact mix
+            Dopad
           </div>
           <div className="mt-2 space-y-1.5">
             {radar.impact.slice(0, 3).map((item) => (
@@ -161,7 +176,7 @@ export function DeskRadarPanel({
 
         <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-2.5">
           <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-            Entities
+            Entity
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {radar.entities.slice(0, 4).map((item) => (
@@ -181,7 +196,7 @@ export function DeskRadarPanel({
 
         <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-2.5">
           <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-            Watch hits
+            Hlásenia
           </div>
           <div className="mt-2 space-y-1.5">
             {radar.watchlists.slice(0, 3).map((item) => (
@@ -197,7 +212,7 @@ export function DeskRadarPanel({
 
         <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-2.5">
           <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-            Sources
+            Zdroje
           </div>
           <div className="mt-2 space-y-1.5">
             {radar.sources.slice(0, 4).map((item) => (

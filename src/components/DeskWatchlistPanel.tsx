@@ -21,9 +21,9 @@ export function DeskWatchlistPanel({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500 sm:text-xs">
-            Watchlist
+            Sledovanie
           </p>
-          <h3 className="mt-1 text-sm font-semibold text-slate-950 sm:text-base">Tracking</h3>
+          <h3 className="mt-1 text-sm font-semibold text-slate-950 sm:text-base">Prehľad</h3>
         </div>
         <Target className="mt-1 h-4 w-4 text-sky-700" />
       </div>

@@ -24,7 +24,7 @@ export function DeskSavedSearchesPanel({
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <History className="h-4 w-4 text-slate-400" />
-          <span className="truncate text-sm font-medium text-slate-700">Saved searches</span>
+          <span className="truncate text-sm font-medium text-slate-700">Uložené vyhľadávania</span>
         </div>
 
         <button
@@ -39,7 +39,7 @@ export function DeskSavedSearchesPanel({
           )}
         >
           <BookmarkPlus className="h-4 w-4" />
-          Save current
+          Uložiť aktuálne
         </button>
       </div>
 
@@ -62,7 +62,7 @@ export function DeskSavedSearchesPanel({
                 type="button"
                 onClick={() => onRemoveSearch(query)}
                 className="news-pressable inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-slate-700"
-                aria-label={`Remove ${query}`}
+                aria-label={`Odstrániť ${query}`}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -71,7 +71,7 @@ export function DeskSavedSearchesPanel({
         </div>
       ) : (
         <p className="mt-3 text-sm leading-6 text-slate-500">
-          Uloz si dotazy ako Slovensko, AI, Tesla alebo Rimavska Sobota.
+          Ulož si vyhľadávania ako Slovensko, AI, Tesla alebo Rimavská Sobota.
         </p>
       )}
     </section>

@@ -4,8 +4,8 @@ interface LoadingIndicatorProps {
 }
 
 export function LoadingIndicator({
-  ariaLabel = 'Nacitavam',
-  label = 'loading',
+  ariaLabel = 'Načítavam',
+  label = 'Načítavam',
 }: LoadingIndicatorProps) {
   return (
     <div className="loader" role="status" aria-label={ariaLabel}>

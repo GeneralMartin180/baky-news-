@@ -73,33 +73,33 @@ const LOCAL_EDITIONS: Record<
   Omit<LocalEditionSummary, "id"> & { query: string }
 > = {
   bratislava: {
-    badge: "Lokalna edicia",
-    description: "Doprava, mesto, skoly, nemocnice a lokalne dianie v Bratislave.",
+    badge: "Lokálna edícia",
+    description: "Doprava, mesto, školy, nemocnice a lokálne dianie v Bratislave.",
     label: "Bratislava",
     query: "Bratislava magistrat doprava policia skoly nemocnica mesto",
   },
   kosice: {
-    badge: "Lokalna edicia",
-    description: "Mesto, bezpecnost, verejny priestor a sluzby v Kosiciach.",
-    label: "Kosice",
+    badge: "Lokálna edícia",
+    description: "Mesto, bezpečnosť, verejný priestor a služby v Košiciach.",
+    label: "Košice",
     query: "Kosice magistrat doprava policia skoly nemocnica mesto",
   },
   presov: {
-    badge: "Lokalna edicia",
-    description: "Presovsky vyber pre dopravu, kraj, mesto a sluzby.",
-    label: "Presov",
+    badge: "Lokálna edícia",
+    description: "Prešovský výber pre dopravu, kraj, mesto a služby.",
+    label: "Prešov",
     query: "Presov doprava policia kraj mesto skoly nemocnica",
   },
   "rimavska-sobota": {
-    badge: "Lokalna edicia",
-    description: "Mesto, okres, sluzby a dianie v Rimavskej Sobote.",
-    label: "Rimavska Sobota",
+    badge: "Lokálna edícia",
+    description: "Mesto, okres, služby a dianie v Rimavskej Sobote.",
+    label: "Rimavská Sobota",
     query: "Rimavska Sobota Gemer Malohont okres doprava policia mesto",
   },
   vychod: {
-    badge: "Regionalny fokus",
-    description: "Kosice, Presov a temy s dopadom na vychod Slovenska.",
-    label: "Vychod",
+    badge: "Regionálny fokus",
+    description: "Košice, Prešov a témy s dopadom na východ Slovenska.",
+    label: "Východ",
     query: "Kosice Presov vychod Slovenska kraj doprava policia mesto",
   },
 };
@@ -152,10 +152,10 @@ const SLOVAK_FEEDS: Record<Category, FeedCandidate[]> = {
 
 const CATEGORY_LABELS: Record<Category, string> = {
   business: "Biznis",
-  general: "Hlavne spravy",
+  general: "Hlavné správy",
   science: "Veda",
-  sports: "Sport",
-  technology: "Technologie",
+  sports: "Šport",
+  technology: "Technológie",
 };
 
 function buildJsonResponse(payload: unknown, init?: ResponseInit) {

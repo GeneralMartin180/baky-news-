@@ -303,29 +303,29 @@ export function enforceRequestPolicy(
       normalizeTextForKeys(options.articleUrl || options.query || request.url || baseKey);
     const cooldownKey = `${policy}:cooldown:${clientIp}:${cooldownScope}`;
     if (violatesCooldown(cooldownKey, config.cooldownMs, now)) {
-      return block(429, "Poziadavka bola odoslana prilis rychlo. Skuste to znovu o chvilu.");
+      return block(429, "Požiadavka bola odoslaná príliš rýchlo. Skúste to znovu o chvíľu.");
     }
   }
 
   if (policy === "news" && options.query) {
     const normalizedQuery = normalizeTextForKeys(options.query);
     if (!normalizedQuery || normalizedQuery.length > 120) {
-      return block(400, "Neplatny vyhladavaci dotaz.");
+      return block(400, "Neplatný vyhľadávací dotaz.");
     }
 
     const searchKey = `news-search:${clientIp}:${normalizedQuery}`;
     if (incrementRate(searchKey, SEARCH_MAX_REQUESTS, SEARCH_WINDOW_MS, now)) {
-      return block(429, "Vyhladavanie je docasne obmedzene. Skuste to neskor.");
+      return block(429, "Vyhľadávanie je dočasne obmedzené. Skúste to neskôr.");
     }
 
     if (violatesCooldown(`${searchKey}:cooldown`, SEARCH_COOLDOWN_MS, now)) {
-      return block(429, "Vyhladavanie opakujete prilis rychlo.");
+      return block(429, "Vyhľadávanie opakujete príliš rýchlo.");
     }
   }
 
   if (policy === "article" && config.suspiciousAgentBlocked) {
     if (isSuspiciousAgent(request) && !isBrowserLikeFetch(request)) {
-      return block(403, "Pristup bol zablokovany.");
+      return block(403, "Prístup bol zablokovaný.");
     }
   }
 

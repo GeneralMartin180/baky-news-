@@ -60,7 +60,7 @@ export function ExecutiveBriefingPanel({
             )}
           >
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            <span className="hidden sm:inline">{copied ? 'Copied' : 'Export brief'}</span>
+            <span className="hidden sm:inline">{copied ? 'Skopírované' : 'Exportovať prehľad'}</span>
           </button>
         </div>
 
@@ -68,7 +68,7 @@ export function ExecutiveBriefingPanel({
           <div className="rounded-lg border border-slate-200/80 bg-white/85 p-3">
             <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
               <FileText className="h-3.5 w-3.5" />
-              Executive points
+              Kľúčové body
             </div>
             <div className="mt-2.5 space-y-2">
               {brief.points.slice(0, 2).map((point) => (
@@ -88,17 +88,17 @@ export function ExecutiveBriefingPanel({
           <div className="rounded-lg border border-slate-200/80 bg-slate-950 p-3 text-white">
             <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-white/70">
               <Sparkles className="h-3.5 w-3.5" />
-              Digest mode
+              Režim prehľadu
             </div>
             <div className="mt-2 text-lg font-semibold">
               {digestMode === 'briefing'
-                ? 'Briefing'
+                ? 'Brífing'
                 : digestMode === 'radar'
                   ? 'Radar'
-                  : 'Feed'}
+                  : 'Prehľad'}
             </div>
             <p className="mt-1.5 text-sm leading-5 text-white/72">
-              Copy do mailu alebo internej spravy.
+              Kópia do e-mailu alebo internej správy.
             </p>
           </div>
         </div>

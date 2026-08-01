@@ -80,9 +80,9 @@ const refreshOptions: Array<{
   label: string;
   value: AutoRefreshMinutes;
 }> = [
-  { label: '1 min', value: 1, description: 'Najrýchlejší live refresh.' },
-  { label: '5 min', value: 5, description: 'Rozumný produktový default.' },
-  { label: '15 min', value: 15, description: 'Menej requestov, pokojnejší feed.' },
+  { label: '1 min', value: 1, description: 'Najrýchlejšie obnovovanie.' },
+  { label: '5 min', value: 5, description: 'Rozumné predvolené obnovovanie.' },
+  { label: '15 min', value: 15, description: 'Menej požiadaviek, pokojnejší feed.' },
 ];
 
 const DEFAULT_SETTINGS: FeedSettings = {
