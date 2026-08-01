@@ -65,6 +65,7 @@ import { DeskRadarPanel } from './components/DeskRadarPanel';
 import { DeskSavedSearchesPanel } from './components/DeskSavedSearchesPanel';
 import { DeskWatchlistPanel } from './components/DeskWatchlistPanel';
 import { ExecutiveBriefingPanel } from './components/ExecutiveBriefingPanel';
+import { SourceBadge } from './components/SourceBadge';
 
 const FEED_SETTINGS_STORAGE_KEY = 'baky-news-feed-settings';
 const ENGAGEMENT_STORAGE_KEY = 'baky-news-engagement-v1';
@@ -635,6 +636,7 @@ function FeedLeadStory({ article, insight, onSelect }: FeedLeadStoryProps) {
             <span className="inline-flex items-center rounded-full border border-slate-200/80 bg-slate-50 px-2 py-0.5 sm:px-3 sm:py-1.5">
               {formatLongDate(article.publishedAt)}
             </span>
+            <SourceBadge article={article} className="max-w-[60%]" />
           </div>
 
           {insight ? (
@@ -697,8 +699,9 @@ function BriefingItem({ article, onSelect }: BriefingItemProps) {
         )}
       </div>
       <div className="min-w-0 py-0.5 sm:py-1">
-        <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500 sm:gap-2 sm:text-[11px] sm:tracking-[0.14em]">
+        <div className="flex flex-wrap items-center justify-between gap-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500 sm:gap-2 sm:text-[11px] sm:tracking-[0.14em]">
           <span>{formatShortDate(article.publishedAt)}</span>
+          <SourceBadge article={article} className="max-w-[70%]" />
         </div>
         <h4 className="mt-1 line-clamp-2 text-xs font-semibold leading-4 text-slate-950 sm:mt-2 sm:line-clamp-3 sm:text-[15px] sm:leading-6">
           {article.title}

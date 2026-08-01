@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import { ArticleInsightChips } from './ArticleInsightChips';
+import { SourceBadge } from './SourceBadge';
 import { DeskArticleInsight } from '../lib/news-intelligence';
 import { NewsArticle } from '../types';
 
@@ -73,10 +74,11 @@ export function NewsCard({ article, index, insight, onSelect }: NewsCardProps) {
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col p-2 sm:p-3 lg:p-4">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-[9px] font-medium uppercase tracking-[0.1em] text-slate-500 md:text-[11px] md:tracking-[0.14em]">
             {dateLabel}
           </span>
+          <SourceBadge article={article} className="max-w-[58%]" />
         </div>
 
         {insight ? (

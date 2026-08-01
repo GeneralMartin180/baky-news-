@@ -19,6 +19,7 @@ import {
 
 import { ArticleInsightChips } from './ArticleInsightChips';
 import { LoadingIndicator } from './LoadingIndicator';
+import { SourceBadge } from './SourceBadge';
 import { DeskArticleInsight } from '../lib/news-intelligence';
 import { NewsArticle } from '../types';
 import { cn } from '../lib/utils';
@@ -662,8 +663,8 @@ export function ArticleModal({
                         onClick={() => onSelectRelated?.(relatedArticle)}
                         className="news-pressable rounded-lg border border-slate-200/80 bg-white px-4 py-3 text-left hover:border-slate-300 hover:bg-slate-50"
                       >
-                        <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-                          {relatedArticle.source.name}
+                        <div className="mb-2">
+                          <SourceBadge article={relatedArticle} className="max-w-full" />
                         </div>
                         <div className="mt-2 line-clamp-3 text-sm font-semibold leading-5 text-slate-950">
                           {relatedArticle.title}
