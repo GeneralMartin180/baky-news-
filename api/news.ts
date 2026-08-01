@@ -1046,6 +1046,31 @@ function balanceArticlesBySource(articles: NewsArticle[], limit: number) {
   return balanced;
 }
 
+function prioritizeSourceArticle(
+  articles: NewsArticle[],
+  sourceName: string,
+  fallbackMatches: string[] = []
+) {
+  const normalizedTarget = normalizeText(sourceName);
+  const normalizedFallbackMatches = fallbackMatches.map((value) => normalizeText(value));
+
+  const preferredIndex = articles.findIndex((article) => {
+    const normalizedSource = normalizeText(article.source.name);
+    return (
+      normalizedSource === normalizedTarget ||
+      normalizedFallbackMatches.some((fallback) => fallback && normalizedSource === fallback)
+    );
+  });
+
+  if (preferredIndex <= 0) {
+    return articles;
+  }
+
+  const prioritized = [...articles];
+  const [preferredArticle] = prioritized.splice(preferredIndex, 1);
+  return [preferredArticle, ...prioritized];
+}
+
 async function fetchCandidate(candidate: FeedCandidate) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 4500);
@@ -1167,8 +1192,12 @@ async function fetchArticles(
     36
   );
   const articles = !query ? await enrichArticleImages(merged) : merged;
+  const prioritizedArticles =
+    !query && category === "general"
+      ? prioritizeSourceArticle(articles, "Aktuality.sk", ["Aktuality", "Aktuality.sk"])
+      : articles;
   return {
-    articles,
+    articles: prioritizedArticles,
     sourceMode,
   };
 }

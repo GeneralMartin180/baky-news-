@@ -80,36 +80,6 @@ const DEFAULT_FEED_SETTINGS: FeedSettings = {
   useLocation: false,
 };
 
-const BREAKING_NEWS_OVERRIDES: Array<{
-  article: NewsArticle;
-  category: Category;
-  expiresAt: string;
-}> = [
-  {
-    category: 'general',
-    expiresAt: '2026-07-29T15:29:10+02:00',
-    article: {
-      title: 'V okrese Rimavská Sobota pátrajú po 16-ročnej Chiare',
-      description:
-        'Polícia vyhlásila pátranie po 16-ročnej Chiare Fekiačovej z okresu Rimavská Sobota a žiada verejnosť o pomoc pri jej vypátraní.',
-      contentOverride: `Polícia vyhlásila pátranie po 16-ročnej Chiare Fekiačovej z okresu Rimavská Sobota. Obracia sa preto na verejnosť so žiadosťou o pomoc pri jej vypátraní.
-
-Nezvestnou je Chiara Fekiačová, narodená 16. februára 2010, ktorá má trvalý pobyt v okrese Rimavská Sobota. Pátranie po nej bolo vyhlásené v utorok 28. júla. Polícia zatiaľ nezverejnila bližší opis nezvestnej osoby ani informácie o oblečení, ktoré mala na sebe v čase zmiznutia.
-
-Ak ste Chiaru videli alebo máte akékoľvek informácie, ktoré by mohli pomôcť pri jej nájdení, okamžite kontaktujte políciu na tiesňovej linke 158. Informácie je možné oznámiť aj Záchrannému Systému Slovensko - Pátranie po osobách na telefónnom čísle +421 948 112 233.
-
-Polícia zdôrazňuje, že aj zdanlivo nepodstatná informácia môže byť pri pátraní rozhodujúca a pomôcť k čo najskoršiemu nájdeniu nezvestného dievčaťa.`,
-      publishedAt: '2026-07-28T12:55:00+02:00',
-      source: {
-        name: 'Bystricak.sk',
-      },
-      url: 'https://www.bystricak.sk/clanky/12462/chiara-z-okresu-rimavska-sobota-sa-nevratila-domov-policia-prosi-o-pomoc-pri-patrani-po-16-rocnom-dievcati',
-      urlToImage:
-        'https://www.bystricak.sk/assets/images/bb/articles/img-1/1785234515-chiara-z-okresu-rimavska-sobota-sa-nevratila-domov-policia-prosi-o-pomoc-pri-patrani-po-16rocnom-dievcati.webp',
-    },
-  },
-];
-
 type FeedView = 'top' | 'for-you' | 'saved';
 
 interface OpenedArticleState {
@@ -483,32 +453,6 @@ function getTodayOpenedCount(engagement: EngagementState) {
 
     return total + opened.count;
   }, 0);
-}
-
-function prependUniqueArticle(articles: NewsArticle[], article: NewsArticle) {
-  return [article, ...articles.filter((candidate) => candidate.url !== article.url)];
-}
-
-function getActiveBreakingNewsOverrides(category: Category, query: string) {
-  if (category !== 'general' || query.trim()) {
-    return [] as NewsArticle[];
-  }
-
-  return BREAKING_NEWS_OVERRIDES.filter(
-    (override) =>
-      override.category === category && Date.now() < Date.parse(override.expiresAt)
-  ).map((override) => override.article);
-}
-
-function applyBreakingNewsOverrides(
-  articles: NewsArticle[],
-  category: Category,
-  query: string
-) {
-  return getActiveBreakingNewsOverrides(category, query).reduceRight(
-    (result, article) => prependUniqueArticle(result, article),
-    articles
-  );
 }
 
 function getTopScoreLabel(scores: Record<string, number>, fallback: string) {
@@ -1298,7 +1242,7 @@ export default function App() {
           return;
         }
 
-        setArticles(applyBreakingNewsOverrides(newsData.articles, nextCategory, query));
+        setArticles(newsData.articles);
         setEditorial(newsData.editorial);
         setLocalEditionSummary(toCompactLocalEditionSummary(newsData.localEdition));
         setLastUpdated(new Date());
