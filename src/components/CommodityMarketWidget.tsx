@@ -460,9 +460,9 @@ function MarketStatus({ quote }: { quote: CommodityMarketQuote }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border-b border-slate-200 py-3">
+    <div className="min-w-0 border-b border-slate-200 py-3">
       <dt className="text-xs text-slate-500">{label}</dt>
-      <dd className="mt-1 text-sm font-semibold tabular-nums text-slate-950">{value}</dd>
+      <dd className="mt-1 break-words text-sm font-semibold tabular-nums text-slate-950">{value}</dd>
     </div>
   );
 }
@@ -536,20 +536,20 @@ function MarketModal({
       {open ? (
         <motion.div
           animate={{ opacity: 1 }}
-          className="fixed inset-0 z-[120] bg-slate-950/55 backdrop-blur-sm sm:p-4"
+          className="fixed inset-0 z-[120] w-full max-w-full overflow-hidden bg-slate-950/55 backdrop-blur-sm sm:p-4"
           exit={{ opacity: 0 }}
           initial={{ opacity: 0 }}
           onClick={onClose}
         >
           <motion.div
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="mx-auto flex h-[100dvh] w-full max-w-[1500px] flex-col overflow-hidden bg-[#f4f6f8] sm:h-[calc(100dvh-2rem)] sm:rounded-lg"
+            className="mx-auto flex h-[100dvh] min-w-0 w-full max-w-[1500px] flex-col overflow-hidden bg-[#f4f6f8] sm:h-[calc(100dvh-2rem)] sm:rounded-lg"
             exit={{ opacity: 0, scale: 0.99, y: 12 }}
             initial={{ opacity: 0, scale: 0.99, y: 12 }}
             onClick={(event) => event.stopPropagation()}
             transition={{ duration: 0.2 }}
           >
-            <header className="flex shrink-0 items-center justify-between border-t-4 border-sky-500 bg-gradient-to-r from-sky-50 via-white to-slate-50 px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-6">
+            <header className="flex min-w-0 shrink-0 items-center justify-between gap-3 border-t-4 border-sky-500 bg-gradient-to-r from-sky-50 via-white to-slate-50 px-3 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-6">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <ChartColumnBig className="h-5 w-5 text-sky-600" />
@@ -560,7 +560,7 @@ function MarketModal({
                   Aktualizované {formatMarketTime(activeMarket.updatedAt)}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <a
                   aria-label="Otvoriť zdroj trhových dát"
                   className="news-pressable hidden h-9 items-center gap-2 border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:flex"
@@ -583,11 +583,11 @@ function MarketModal({
               </div>
             </header>
 
-            <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-slate-200 bg-white px-3 py-2 sm:px-6">
+            <div className="grid w-full shrink-0 grid-cols-4 gap-1 border-b border-slate-200 bg-white px-2 py-2 sm:flex sm:overflow-x-auto sm:px-6">
               {GROUPS.map(({ icon: Icon, id, label }) => (
                 <button
                   className={cn(
-                    'news-pressable flex shrink-0 items-center gap-1.5 px-3 py-2 text-xs font-medium',
+                    'news-pressable flex min-w-0 items-center justify-center gap-1 px-1 py-2 text-[10px] font-medium sm:shrink-0 sm:gap-1.5 sm:px-3 sm:text-xs',
                     activeGroup === id ? 'bg-sky-600 text-white' : 'text-slate-600 hover:bg-slate-100'
                   )}
                   key={id}
@@ -600,21 +600,38 @@ function MarketModal({
               ))}
             </div>
 
-            <div className="grid min-h-0 flex-1 lg:grid-cols-[270px_minmax(0,1fr)]">
-              <aside className="border-b border-slate-200 bg-white lg:min-h-0 lg:overflow-y-auto lg:border-b-0 lg:border-r">
-                <div className="flex gap-2 overflow-x-auto p-3 lg:grid lg:gap-1 lg:p-2">
+            <div className="grid min-h-0 min-w-0 w-full flex-1 grid-cols-[minmax(0,1fr)] overflow-hidden lg:grid-cols-[270px_minmax(0,1fr)]">
+              <aside className="min-w-0 w-full border-b border-slate-200 bg-white lg:min-h-0 lg:overflow-y-auto lg:border-b-0 lg:border-r">
+                <div className="p-3 lg:hidden">
+                  <label className="mb-1.5 block text-[10px] font-semibold uppercase text-slate-500" htmlFor="mobile-market-select">
+                    Komodita
+                  </label>
+                  <select
+                    className="h-11 w-full min-w-0 border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-950 outline-none focus:border-sky-500"
+                    id="mobile-market-select"
+                    onChange={(event) => setSelectedId(event.target.value)}
+                    value={selectedQuote.id}
+                  >
+                    {filteredQuotes.map((quote) => (
+                      <option key={quote.id} value={quote.id}>
+                        {quote.shortLabel} · {formatPrice(quote.value)} {quote.currency}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="hidden gap-1 p-2 lg:grid">
                   {filteredQuotes.map((quote) => (
-                    <div className="w-[152px] shrink-0 lg:w-auto" key={quote.id}>
+                    <div className="min-w-0" key={quote.id}>
                       <QuoteButton active={quote.id === selectedQuote.id} onClick={() => setSelectedId(quote.id)} quote={quote} />
                     </div>
                   ))}
                 </div>
               </aside>
 
-              <main className="min-h-0 overflow-y-auto bg-white">
-                <div className="mx-auto max-w-6xl px-4 py-5 sm:px-7 sm:py-7">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="min-w-0">
+              <main className="min-h-0 min-w-0 w-full max-w-full overflow-x-hidden overflow-y-auto bg-white">
+                <div className="mx-auto min-w-0 w-full max-w-6xl px-3 py-4 sm:px-7 sm:py-7">
+                  <div className="flex min-w-0 flex-col items-stretch gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+                    <div className="min-w-0 max-w-full">
                       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                         <span>{selectedQuote.symbol}</span>
                         <span>·</span>
@@ -629,17 +646,17 @@ function MarketModal({
                         </span>
                         <span className="pb-1 text-sm font-medium text-slate-500">{selectedQuote.currency}</span>
                       </div>
-                      <div className={cn('mt-2 flex items-center gap-2 text-sm font-semibold tabular-nums', colors.text)}>
+                      <div className={cn('mt-2 flex min-w-0 flex-wrap items-center gap-2 text-sm font-semibold tabular-nums', colors.text)}>
                         <TrendIcon className="h-4 w-4" quote={selectedQuote} />
                         {formatSigned(selectedQuote.change)} ({formatPercent(selectedQuote.changePercent)})
                         <span className="font-normal text-slate-400">{activeMarket.frequencyLabel}</span>
                       </div>
                     </div>
-                    <div className="flex max-w-full items-center gap-1 overflow-x-auto border-b border-slate-200">
+                    <div className="grid w-full min-w-0 grid-cols-4 border-b border-slate-200 sm:flex sm:w-auto sm:max-w-full sm:items-center sm:gap-1 sm:overflow-x-auto">
                       {RANGES.map((item) => (
                         <button
                           className={cn(
-                            'news-pressable min-w-9 shrink-0 border-b-2 px-2.5 py-2 text-xs font-semibold',
+                            'news-pressable min-w-0 border-b-2 px-1.5 py-2 text-xs font-semibold sm:min-w-9 sm:shrink-0 sm:px-2.5',
                             range === item.id ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-950'
                           )}
                           key={item.id}
@@ -652,8 +669,8 @@ function MarketModal({
                     </div>
                   </div>
 
-                  <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                    <div className="flex items-center gap-3 text-[11px] font-medium text-slate-500">
+                  <div className="mt-4 flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2 sm:mt-6">
+                    <div className="flex min-w-0 items-center gap-2 text-[11px] font-medium text-slate-500 sm:gap-3">
                       <ChartModeToggle mode={chartMode} onChange={onChartModeChange} />
                       <span className="hidden items-center gap-1.5 sm:flex"><span className="h-0.5 w-5 bg-sky-600" /> CENA</span>
                       <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 bg-emerald-500/40" /> OBJEM</span>
@@ -670,7 +687,7 @@ function MarketModal({
                     </button>
                   </div>
 
-                  <div className="relative border-b border-slate-200 py-4">
+                  <div className="relative min-w-0 w-full max-w-full overflow-hidden border-b border-slate-200 py-3 sm:py-4">
                     {isRangeLoading ? (
                       <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/75 backdrop-blur-[1px]">
                         <LoaderCircle className="h-6 w-6 animate-spin text-sky-600" />
@@ -694,7 +711,7 @@ function MarketModal({
                     </div>
                     <div className="mt-6 md:mt-0">
                       <h4 className="border-b-2 border-sky-600 pb-2 text-sm font-semibold uppercase text-slate-950">Kľúčové dáta</h4>
-                      <dl className="grid grid-cols-2 gap-x-4 md:block">
+                      <dl className="grid min-w-0 grid-cols-1 gap-x-4 min-[380px]:grid-cols-2 md:block">
                       <Stat label="Predchádzajúca hodnota" value={selectedQuote.previousValue === null ? '—' : formatPrice(selectedQuote.previousValue)} />
                       <Stat label="Denné rozpätie" value={selectedQuote.dayLow === null || selectedQuote.dayHigh === null ? '—' : `${formatPrice(selectedQuote.dayLow)} – ${formatPrice(selectedQuote.dayHigh)}`} />
                       <Stat label="52-týždňové rozpätie" value={selectedQuote.fiftyTwoWeekLow === null || selectedQuote.fiftyTwoWeekHigh === null ? '—' : `${formatPrice(selectedQuote.fiftyTwoWeekLow)} – ${formatPrice(selectedQuote.fiftyTwoWeekHigh)}`} />
@@ -747,27 +764,27 @@ export function CommodityMarketWidget({
   return (
     <>
       <motion.section
-        className="news-card-shadow overflow-hidden border border-slate-200 bg-white"
+        className="news-card-shadow min-w-0 w-full max-w-full overflow-hidden border border-slate-200 bg-white"
         initial={{ opacity: 0, y: 18 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
         viewport={{ once: true }}
         whileInView={{ opacity: 1, y: 0 }}
       >
-        <div className="flex items-center justify-between border-t-4 border-sky-500 bg-gradient-to-r from-sky-50 via-white to-slate-50 px-4 py-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <ChartColumnBig className="h-4 w-4 text-sky-600" />
-              <h3 className="text-sm font-semibold text-slate-950">Komoditné trhy</h3>
+        <div className="flex min-w-0 items-center justify-between gap-2 border-t-4 border-sky-500 bg-gradient-to-r from-sky-50 via-white to-slate-50 px-3 py-3 sm:px-4">
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+              <ChartColumnBig className="h-4 w-4 shrink-0 text-sky-600" />
+              <h3 className="truncate text-sm font-semibold text-slate-950">Komoditné trhy</h3>
               {isLive ? (
-                <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-700">
+                <span className="hidden shrink-0 items-center gap-1 text-[10px] font-medium text-emerald-700 min-[390px]:flex">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
                   AKTUÁLNE
                 </span>
               ) : null}
             </div>
-            <p className="mt-0.5 text-[11px] text-slate-500">Energia, kovy a potraviny</p>
+            <p className="mt-0.5 truncate text-[10px] text-slate-500 sm:text-[11px]">Energia, kovy a potraviny</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <ChartModeToggle compact mode={chartMode} onChange={setChartMode} />
             <button
               aria-label="Otvoriť detail burzy"
@@ -789,15 +806,15 @@ export function CommodityMarketWidget({
           ))}
         </div>
 
-        <button className="block w-full p-4 text-left" onClick={() => setIsOpen(true)} type="button">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs text-slate-500">{featuredQuote.symbol} · {featuredQuote.exchange}</div>
-              <div className="mt-1 text-lg font-semibold text-slate-950">{featuredQuote.label}</div>
+        <button className="block min-w-0 w-full max-w-full overflow-hidden p-3 text-left sm:p-4" onClick={() => setIsOpen(true)} type="button">
+          <div className="flex min-w-0 items-start justify-between gap-2 sm:gap-3">
+            <div className="min-w-0">
+              <div className="truncate text-xs text-slate-500">{featuredQuote.symbol} · {featuredQuote.exchange}</div>
+              <div className="mt-1 truncate text-base font-semibold text-slate-950 sm:text-lg">{featuredQuote.label}</div>
             </div>
-            <MarketStatus quote={featuredQuote} />
+            <span className="shrink-0"><MarketStatus quote={featuredQuote} /></span>
           </div>
-          <div className="mt-2 flex items-end gap-2">
+          <div className="mt-2 flex min-w-0 flex-wrap items-end gap-x-2 gap-y-1">
             <span className="text-2xl font-semibold tabular-nums text-slate-950">{formatPrice(featuredQuote.value)}</span>
             <span className="pb-1 text-xs text-slate-500">{featuredQuote.currency}</span>
             <span className={cn('flex items-center gap-1 pb-1 text-xs font-semibold', colors.text)}>
@@ -805,14 +822,14 @@ export function CommodityMarketWidget({
               {formatPercent(featuredQuote.changePercent)}
             </span>
           </div>
-          <div className="mt-2">
+          <div className="mt-2 min-w-0 w-full max-w-full overflow-hidden">
             <MarketChart compact mode={chartMode} quote={featuredQuote} range={market.range} />
           </div>
         </button>
 
-        <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-2.5 text-[10px] text-slate-500">
-          <span>{market.sourceLabel} · údaje môžu meškať</span>
-          <span className="flex items-center gap-1 tabular-nums">
+        <div className="flex min-w-0 items-center justify-between gap-2 border-t border-slate-200 px-3 py-2.5 text-[10px] text-slate-500 sm:px-4">
+          <span className="min-w-0 truncate">{market.sourceLabel} · údaje môžu meškať</span>
+          <span className="flex shrink-0 items-center gap-1 tabular-nums">
             {isRefreshing ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Clock3 className="h-3 w-3" />}
             {lastRefreshedAt ? formatMarketTime(lastRefreshedAt) : formatMarketTime(market.updatedAt)}
           </span>
