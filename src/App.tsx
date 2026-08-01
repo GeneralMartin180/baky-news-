@@ -65,7 +65,6 @@ import { DeskRadarPanel } from './components/DeskRadarPanel';
 import { DeskSavedSearchesPanel } from './components/DeskSavedSearchesPanel';
 import { DeskWatchlistPanel } from './components/DeskWatchlistPanel';
 import { ExecutiveBriefingPanel } from './components/ExecutiveBriefingPanel';
-import { NationalOverviewPanel } from './components/NationalOverviewPanel';
 import { SourceBadge } from './components/SourceBadge';
 
 const FEED_SETTINGS_STORAGE_KEY = 'baky-news-feed-settings';
@@ -1665,8 +1664,6 @@ export default function App() {
     !feedSettings.useLocation && !searchQuery && category === 'general';
   const shouldShowExecutiveBrief =
     digestMode !== 'feed' || activeWatchlistIds.length > 0 || searchQuery.length > 0;
-  const shouldShowNationalOverview =
-    category === 'general' && feedView === 'top' && !searchQuery;
 
   return (
     <div className="min-h-screen overflow-x-clip bg-[#f4f5f7] text-slate-950">
@@ -1831,17 +1828,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {shouldShowNationalOverview ? (
-                  <NationalOverviewPanel
-                    articles={activeArticles}
-                    editorial={editorial}
-                    insights={articleInsights}
-                    locationLabel={compactLocationLabel}
-                    onSelect={handleSelectArticle}
-                    updatedAt={lastUpdated}
-                  />
-                ) : null}
-
                 <div className="hidden sm:block">
                   <DeskSavedSearchesPanel
                     currentValue={searchInput || searchQuery}
@@ -1964,7 +1950,7 @@ export default function App() {
                   </div>
                 ) : null}
 
-                {feedView !== 'saved' && editorial && !shouldShowNationalOverview ? (
+                {feedView !== 'saved' && editorial ? (
                   <div className="hidden sm:block">
                     <EditorialPanel
                       briefing={editorial}

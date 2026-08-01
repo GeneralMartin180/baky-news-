@@ -132,21 +132,31 @@ const BBC_FEEDS: Record<Category, FeedCandidate[]> = {
 const SLOVAK_FEEDS: Record<Category, FeedCandidate[]> = {
   business: [
     { label: "aktuality-business", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/ekonomika/" },
+    { label: "pravda-business", sourceName: "Pravda", url: "https://www.pravda.sk/ekonomika/rss/xml" },
+    { label: "dennikn-business", sourceName: "Denník N", url: "https://dennikn.sk/ekonomika/feed" },
     { label: "startitup-business", sourceName: "Startitup", url: "https://www.startitup.sk/feed/" },
   ],
   general: [
     { label: "aktuality-general", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/" },
+    { label: "pravda-general", sourceName: "Pravda", url: "https://www.pravda.sk/spravy/rss/xml" },
+    { label: "pravda-regions", sourceName: "Pravda", url: "https://www.pravda.sk/spravy/regiony/rss/xml" },
+    { label: "dennikn-general", sourceName: "Denník N", url: "https://dennikn.sk/feed" },
     { label: "startitup-general", sourceName: "Startitup", url: "https://www.startitup.sk/feed/" },
     { label: "eu-featured-news", sourceName: "European Union", url: "https://european-union.europa.eu/node/309/rss_en" },
   ],
   science: [
-    { label: "aktuality-science", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/spravy/veda/23/" },
+    { label: "pravda-science", sourceName: "Pravda", url: "https://www.pravda.sk/vat/rss/xml" },
+    { label: "dennikn-science", sourceName: "Denník N", url: "https://dennikn.sk/veda/feed" },
   ],
   sports: [
     { label: "sport-aktuality", sourceName: "Sport.sk", url: "https://sport.aktuality.sk/rss/" },
+    { label: "pravda-sports", sourceName: "Pravda", url: "https://www.pravda.sk/sportweb/rss/xml" },
+    { label: "dennikn-sports", sourceName: "Denník N", url: "https://dennikn.sk/sport/feed" },
   ],
   technology: [
     { label: "zive", sourceName: "Zive.sk", url: "https://zive.aktuality.sk/rss/najnovsie/" },
+    { label: "dennikn-technology", sourceName: "Denník N", url: "https://dennikn.sk/veda/feed" },
+    { label: "pravda-technology", sourceName: "Pravda", url: "https://www.pravda.sk/vat/rss/xml" },
   ],
 };
 
@@ -310,14 +320,20 @@ function extractAttribute(tag: string, name: string) {
   return decodeHtml(tag.match(new RegExp(`${name}=["']([^"']+)["']`, "i"))?.[1] ?? "");
 }
 
-function extractItemSourceName(item: string, title: string, fallback: string) {
+function extractItemSourceName(item: string, title: string, candidate: FeedCandidate) {
   const sourceName = firstMatch(item, /<source\b[^>]*>([\s\S]*?)<\/source>/i);
   if (sourceName) {
     return sourceName;
   }
 
-  const titleSource = title.match(/\s+-\s+([^-]+)$/)?.[1]?.trim();
-  return titleSource || fallback;
+  if (candidate.provider) {
+    const titleSource = title.match(/\s+-\s+([^-]+)$/)?.[1]?.trim();
+    if (titleSource) {
+      return titleSource;
+    }
+  }
+
+  return candidate.sourceName;
 }
 
 function cleanItemTitle(title: string, sourceName: string) {
@@ -863,7 +879,7 @@ function parseItems(xml: string, candidate: FeedCandidate): NewsArticle[] {
         return null;
       }
 
-      const sourceName = extractItemSourceName(item, title, candidate.sourceName);
+      const sourceName = extractItemSourceName(item, title, candidate);
       const description = stripTags(descriptionMarkup);
       return {
         title: cleanItemTitle(title, sourceName),
@@ -986,6 +1002,50 @@ function prioritizeArticlesWithImages(articles: NewsArticle[]) {
   return [...articles].sort((left, right) => Number(Boolean(right.urlToImage)) - Number(Boolean(left.urlToImage)));
 }
 
+function sortArticlesNewestFirst(articles: NewsArticle[]) {
+  return [...articles].sort((left, right) => {
+    const leftTime = Date.parse(left.publishedAt) || 0;
+    const rightTime = Date.parse(right.publishedAt) || 0;
+    return rightTime - leftTime;
+  });
+}
+
+function balanceArticlesBySource(articles: NewsArticle[], limit: number) {
+  const groups = new Map<string, NewsArticle[]>();
+
+  for (const article of articles) {
+    const sourceKey = normalizeText(article.source.name) || "neznamy-zdroj";
+    const group = groups.get(sourceKey) ?? [];
+    group.push(article);
+    groups.set(sourceKey, group);
+  }
+
+  const balanced: NewsArticle[] = [];
+  let round = 0;
+  let addedInRound = true;
+
+  while (balanced.length < limit && addedInRound) {
+    addedInRound = false;
+
+    for (const group of groups.values()) {
+      const article = group[round];
+      if (!article) {
+        continue;
+      }
+
+      balanced.push(article);
+      addedInRound = true;
+      if (balanced.length === limit) {
+        break;
+      }
+    }
+
+    round += 1;
+  }
+
+  return balanced;
+}
+
 async function fetchCandidate(candidate: FeedCandidate) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 4500);
@@ -1066,25 +1126,46 @@ async function fetchArticles(
     }
   }
 
-  for (const candidate of candidates) {
-    try {
-      const articles = await fetchCandidate(candidate);
-      fetchedArticles.push(...articles);
-      if (!candidate.label.startsWith("bbc")) {
-        sourceMode = sourceMode === "rss" ? "slovak-rss" : sourceMode;
+  const candidateResults = await Promise.all(
+    candidates.map(async (candidate) => {
+      try {
+        return {
+          articles: await fetchCandidate(candidate),
+          candidate,
+        };
+      } catch (error) {
+        console.warn(`Feed candidate failed (${candidate.label})`, error);
+        return null;
       }
+    })
+  );
 
-      if (!query && fetchedArticles.length >= 36) {
-        break;
-      }
-    } catch (error) {
-      console.warn(`Feed candidate failed (${candidate.label})`, error);
+  for (const result of candidateResults) {
+    if (!result) {
+      continue;
     }
+
+    fetchedArticles.push(...result.articles);
+  }
+
+  if (
+    sourceMode === "rss" &&
+    candidateResults.some((result) => result && !result.candidate.label.startsWith("bbc"))
+  ) {
+    sourceMode = "mixed-slovak-rss";
   }
 
   const filtered = filterArticlesByQuery(dedupeArticles(fetchedArticles), query);
-  const ranked = rankArticles(filtered, localEdition, query, locationQuery).slice(0, 36);
-  const merged = dedupeArticles([...locationArticles, ...ranked]).slice(0, 36);
+  const ranked = rankArticles(
+    sortArticlesNewestFirst(filtered),
+    localEdition,
+    query,
+    locationQuery
+  );
+  const merged = balanceArticlesBySource(
+    dedupeArticles([...locationArticles, ...ranked]),
+    36
+  );
   const articles = !query ? await enrichArticleImages(merged) : merged;
   return {
     articles,
