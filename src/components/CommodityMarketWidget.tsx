@@ -513,12 +513,19 @@ function MarketModal({
   }, [onClose, open]);
 
   useEffect(() => {
-    if (!open || range !== '1d') return;
-    setActiveMarket(market);
-  }, [market, open, range]);
+    if (!open) return;
 
-  useEffect(() => {
-    if (!open || activeMarket.range === range) return;
+    if (range === '1d') {
+      setActiveMarket(market);
+      setIsRangeLoading(false);
+      return;
+    }
+
+    if (activeMarket.range === range) {
+      setIsRangeLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
     setIsRangeLoading(true);
     fetchCommodityMarkets(controller.signal, range)
@@ -530,7 +537,7 @@ function MarketModal({
         if (!controller.signal.aborted) setIsRangeLoading(false);
       });
     return () => controller.abort();
-  }, [activeMarket.range, open, range]);
+  }, [activeMarket.range, market, open, range]);
 
   const selectedQuote = activeMarket.quotes.find((quote) => quote.id === selectedId) ?? activeMarket.quotes[0];
   const filteredQuotes = activeMarket.quotes.filter((quote) => activeGroup === 'all' || quote.group === activeGroup);
