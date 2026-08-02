@@ -775,7 +775,7 @@ async function extractGoogleNewsSearchPreviewImage(
     return imageUrl;
   }
 
-  return extractGoogleNewsPreviewImageUrl(searchHtml);
+  return "";
 }
 
 async function extractGoogleNewsPreviewImage(articleUrl: string) {
