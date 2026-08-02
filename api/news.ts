@@ -417,6 +417,12 @@ function normalizeImageUrl(value: string, baseUrl = "", options: NormalizeImageO
     imageUrl = imageUrl.replace(/\/w[0-9]+\//, "/");
   }
 
+  if (imageUrl.includes("googleusercontent.com")) {
+    imageUrl = imageUrl
+      .replace(/=s0-w\d+(?:-h\d+)?/i, "=s0-w1200")
+      .replace(/=rj-w\d+-h\d+(?:-[a-z0-9]+)*/i, "=s0-w1200");
+  }
+
   if (
     imageUrl.includes("i0.wp.com") ||
     imageUrl.includes("i1.wp.com") ||
@@ -705,6 +711,7 @@ function extractSearchHtmlImageCandidate(windowHtml: string) {
     /https:\/\/m\.smedata\.sk\/api-media\/media\/image\/[^"'\s>]+/i,
     /https:\/\/image\.smedata\.sk\/[^"'\s>]+/i,
     /https:\/\/m\.smedata\.sk\/[^"'\s>]+/i,
+    /https:\/\/lh3\.googleusercontent\.com\/[^"'\s>]+/i,
   ];
 
   for (const pattern of candidates) {
@@ -718,6 +725,25 @@ function extractSearchHtmlImageCandidate(windowHtml: string) {
   }
 
   return "";
+}
+
+function buildSearchHtmlWindow(searchHtml: string, articleUrl: string, title = "") {
+  const normalizedUrl = articleUrl.replace(/&amp;/g, "&");
+  const articleIndex = normalizedUrl ? searchHtml.indexOf(normalizedUrl) : -1;
+
+  if (articleIndex >= 0) {
+    return searchHtml.slice(Math.max(0, articleIndex - 6000), articleIndex + 4000);
+  }
+
+  const titleNeedle = decodeHtml(title).trim().toLowerCase().slice(0, 48);
+  if (titleNeedle) {
+    const titleIndex = searchHtml.toLowerCase().indexOf(titleNeedle);
+    if (titleIndex >= 0) {
+      return searchHtml.slice(Math.max(0, titleIndex - 6000), titleIndex + 8000);
+    }
+  }
+
+  return searchHtml;
 }
 
 async function fetchGoogleNewsSearchPageHtml(query: string, language: LanguageCode, region: RegionCode) {
@@ -765,22 +791,67 @@ async function fetchGoogleNewsSearchPageHtml(query: string, language: LanguageCo
 
 async function extractGoogleNewsSearchPreviewImage(
   articleUrl: string,
-  query = "site:sme.sk/c/"
+  query = "site:sme.sk/c/",
+  title = ""
 ) {
   const searchHtml = await fetchGoogleNewsSearchPageHtml(query, "sk", "SK");
   if (!searchHtml) {
     return "";
   }
 
-  const normalizedUrl = articleUrl.replace(/&amp;/g, "&");
-  const articleIndex = searchHtml.indexOf(normalizedUrl);
-  const windowHtml =
-    articleIndex >= 0
-      ? searchHtml.slice(Math.max(0, articleIndex - 6000), articleIndex + 4000)
-      : searchHtml;
+  const windowHtml = buildSearchHtmlWindow(searchHtml, articleUrl, title);
   const imageUrl = extractSearchHtmlImageCandidate(windowHtml);
   if (imageUrl) {
     return imageUrl;
+  }
+
+  return "";
+}
+
+function isSmeDomain(hostname: string) {
+  const normalizedHost = hostname.toLowerCase();
+  return normalizedHost === "sme.sk" || normalizedHost.endsWith(".sme.sk");
+}
+
+function isSmeArticle(article: NewsArticle) {
+  try {
+    if (isSmeDomain(new URL(article.url).hostname)) {
+      return true;
+    }
+  } catch {
+    return normalizeText(article.source.name).includes("sme");
+  }
+
+  return normalizeText(article.source.name).includes("sme");
+}
+
+function buildSmeImageFallbackQueries(article: NewsArticle) {
+  const title = decodeHtml(article.title).trim();
+  if (!title) {
+    return [];
+  }
+
+  const queries = new Set<string>();
+
+  try {
+    const hostname = new URL(article.url).hostname.toLowerCase().replace(/^www\./, "");
+    if (isSmeDomain(hostname)) {
+      queries.add(`site:${hostname} "${title}"`);
+    }
+  } catch {
+    // Ignore invalid article URLs and fall back to domain-wide SME query below.
+  }
+
+  queries.add(`site:sme.sk "${title}"`);
+  return [...queries];
+}
+
+async function extractSmeFallbackImage(article: NewsArticle) {
+  for (const query of buildSmeImageFallbackQueries(article)) {
+    const imageUrl = await extractGoogleNewsSearchPreviewImage(article.url, query, article.title);
+    if (imageUrl) {
+      return imageUrl;
+    }
   }
 
   return "";
@@ -947,9 +1018,16 @@ async function enrichArticleImages(
 
       let articleImage = "";
       if (isSmeProxyArticle) {
-        articleImage = await extractGoogleNewsSearchPreviewImage(resolvedUrl);
+        articleImage = await extractGoogleNewsSearchPreviewImage(resolvedUrl, "site:sme.sk/c/", article.title);
       } else if (!article.urlToImage || shouldEnhanceArticleImage(resolvedUrl, article.urlToImage)) {
         articleImage = await extractPrimaryArticleImage(resolvedUrl);
+      }
+
+      if (!articleImage && isSmeArticle({ ...article, url: resolvedUrl })) {
+        articleImage = await extractSmeFallbackImage({
+          ...article,
+          url: resolvedUrl,
+        });
       }
 
       result[index] =
