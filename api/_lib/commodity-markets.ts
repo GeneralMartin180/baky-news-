@@ -114,73 +114,86 @@ function buildHistory(result: YahooChartResult): CommodityMarketPoint[] {
 }
 
 async function fetchQuote(definition: QuoteDefinition, range: CommodityMarketRange) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  const config = RANGE_CONFIG[range];
-  const url = `${YAHOO_CHART_URL}/${encodeURIComponent(definition.symbol)}?range=${range}&interval=${config.interval}&includePrePost=false&events=div%2Csplits`;
+  async function requestChart(requestRange: CommodityMarketRange) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    const config = RANGE_CONFIG[requestRange];
+    const url = `${YAHOO_CHART_URL}/${encodeURIComponent(definition.symbol)}?range=${requestRange}&interval=${config.interval}&includePrePost=false&events=div%2Csplits`;
 
-  try {
-    const response = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "Mozilla/5.0 (compatible; BakyNews/1.0; +https://baky-news.vercel.app/)",
-      },
-      signal: controller.signal,
-    });
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "Mozilla/5.0 (compatible; BakyNews/1.0; +https://baky-news.vercel.app/)",
+        },
+        signal: controller.signal,
+      });
 
-    if (!response.ok) throw new Error(`Market request failed with ${response.status}`);
+      if (!response.ok) throw new Error(`Market request failed with ${response.status}`);
 
-    const payload = (await response.json()) as {
-      chart?: { error?: unknown; result?: YahooChartResult[] };
-    };
-    const result = payload.chart?.result?.[0];
-    if (!result || payload.chart?.error) throw new Error(`No chart data for ${definition.symbol}`);
+      const payload = (await response.json()) as {
+        chart?: { error?: unknown; result?: YahooChartResult[] };
+      };
+      const result = payload.chart?.result?.[0];
+      if (!result || payload.chart?.error) throw new Error(`No chart data for ${definition.symbol}`);
 
-    const meta = result.meta ?? {};
-    const history = buildHistory(result);
-    const value = finiteNumber(meta.regularMarketPrice) ?? history.at(-1)?.value ?? null;
-    if (value === null || history.length < 2) throw new Error(`Incomplete chart data for ${definition.symbol}`);
-
-    const firstHistoryValue = history[0].value;
-    const chartPreviousClose = finiteNumber(meta.chartPreviousClose) ?? finiteNumber(meta.previousClose);
-    const previousValue = range === "1d" ? chartPreviousClose ?? firstHistoryValue : firstHistoryValue;
-    const change = previousValue === null ? null : round(value - previousValue);
-    const changePercent =
-      previousValue === null || previousValue === 0
-        ? null
-        : round(((value - previousValue) / previousValue) * 100, 2);
-
-    return {
-      change,
-      changePercent,
-      currency: stringValue(meta.currency, "USD"),
-      dayHigh: finiteNumber(meta.regularMarketDayHigh),
-      dayLow: finiteNumber(meta.regularMarketDayLow),
-      exchange: stringValue(meta.fullExchangeName, stringValue(meta.exchangeName, "Burza")),
-      fiftyTwoWeekHigh: finiteNumber(meta.fiftyTwoWeekHigh),
-      fiftyTwoWeekLow: finiteNumber(meta.fiftyTwoWeekLow),
-      group: definition.group,
-      history,
-      id: definition.id,
-      label: stringValue(meta.longName, definition.label),
-      marketOpen: getMarketOpen(meta),
-      marketTime: toIsoTime(meta.regularMarketTime),
-      previousValue,
-      shortLabel: definition.shortLabel,
-      symbol: definition.symbol,
-      trend:
-        changePercent === null || Math.abs(changePercent) < 0.005
-          ? "flat"
-          : changePercent > 0
-            ? "up"
-            : "down",
-      unit: stringValue(meta.currency, "USD"),
-      value: round(value),
-      volume: finiteNumber(meta.regularMarketVolume),
-    } satisfies CommodityMarketQuote;
-  } finally {
-    clearTimeout(timeout);
+      return result;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
+
+  let result = await requestChart(range);
+  let history = buildHistory(result);
+
+  // Yahoo returns an empty 1-day series while commodity exchanges are closed.
+  // Use the latest completed session so the market panel remains available.
+  if (range === "1d" && history.length < 2) {
+    result = await requestChart("5d");
+    history = buildHistory(result).slice(-96);
+  }
+
+  const meta = result.meta ?? {};
+  const value = finiteNumber(meta.regularMarketPrice) ?? history.at(-1)?.value ?? null;
+  if (value === null || history.length < 2) throw new Error(`Incomplete chart data for ${definition.symbol}`);
+
+  const firstHistoryValue = history[0].value;
+  const chartPreviousClose = finiteNumber(meta.chartPreviousClose) ?? finiteNumber(meta.previousClose);
+  const previousValue = range === "1d" ? chartPreviousClose ?? firstHistoryValue : firstHistoryValue;
+  const change = previousValue === null ? null : round(value - previousValue);
+  const changePercent =
+    previousValue === null || previousValue === 0
+      ? null
+      : round(((value - previousValue) / previousValue) * 100, 2);
+
+  return {
+    change,
+    changePercent,
+    currency: stringValue(meta.currency, "USD"),
+    dayHigh: finiteNumber(meta.regularMarketDayHigh),
+    dayLow: finiteNumber(meta.regularMarketDayLow),
+    exchange: stringValue(meta.fullExchangeName, stringValue(meta.exchangeName, "Burza")),
+    fiftyTwoWeekHigh: finiteNumber(meta.fiftyTwoWeekHigh),
+    fiftyTwoWeekLow: finiteNumber(meta.fiftyTwoWeekLow),
+    group: definition.group,
+    history,
+    id: definition.id,
+    label: stringValue(meta.longName, definition.label),
+    marketOpen: getMarketOpen(meta),
+    marketTime: toIsoTime(meta.regularMarketTime),
+    previousValue,
+    shortLabel: definition.shortLabel,
+    symbol: definition.symbol,
+    trend:
+      changePercent === null || Math.abs(changePercent) < 0.005
+        ? "flat"
+        : changePercent > 0
+          ? "up"
+          : "down",
+    unit: stringValue(meta.currency, "USD"),
+    value: round(value),
+    volume: finiteNumber(meta.regularMarketVolume),
+  } satisfies CommodityMarketQuote;
 }
 
 async function readMarketSnapshot(range: CommodityMarketRange) {

@@ -108,6 +108,27 @@ const LOCAL_EDITIONS: Record<
   },
 };
 
+const GLOBAL_CATEGORY_FEEDS: Record<Exclude<Category, "general">, FeedCandidate[]> = {
+  business: [
+    { label: "bbc-business", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/business/rss.xml" },
+    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+  science: [
+    { label: "bbc-science", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" },
+    { label: "bbc-technology", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/technology/rss.xml" },
+    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+  sports: [
+    { label: "bbc-sport", sourceName: "BBC Sport", url: "https://feeds.bbci.co.uk/sport/rss.xml" },
+    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+  technology: [
+    { label: "bbc-technology", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/technology/rss.xml" },
+    { label: "bbc-science", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" },
+    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
+  ],
+};
+
 const SLOVAK_FEEDS: Record<Category, FeedCandidate[]> = {
   business: [
     { label: "aktuality-business", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/ekonomika/" },
@@ -302,8 +323,13 @@ function buildCandidates(options: FeedOptions): FeedCandidate[] {
       ]
     : [];
 
+  const globalCandidates = options.category === "general"
+    ? []
+    : GLOBAL_CATEGORY_FEEDS[options.category];
+
   return dedupeCandidates([
     ...slovakCandidates,
+    ...globalCandidates,
   ]);
 }
 
@@ -1467,7 +1493,9 @@ function buildEditorial(
     watchlist: articles.slice(0, 3).map((article) => article.title),
     whyItMatters: localEdition
       ? "Feed uprednostnuje clanky, ktore sa najlepsie zhoduju s lokalnou ediciou, a doplna ich slovenskym hlavnym mixom."
-      : "Feed uprednostnuje slovenske zdroje pre slovensku ediciu a pouziva BBC ako zalozny globalny kontext.",
+      : category === "general"
+      ? "Hlavny feed uprednostnuje slovenske spravodajske zdroje."
+      : "Tematicky feed kombinuje slovenske zdroje s povodnym globalnym kontextom.",
   };
 }
 
