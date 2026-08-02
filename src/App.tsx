@@ -1611,7 +1611,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen overflow-x-clip bg-[#f4f5f7] text-slate-950">
-      <header className="news-glass z-50 border-b border-slate-200/75 pt-[env(safe-area-inset-top)] sm:sticky sm:top-0">
+      <header className="news-glass border-b border-slate-200/75 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-2.5 px-3 py-2.5 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-3.5 lg:px-8">
           <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none sm:gap-4">
             <Logo className="h-9 w-9 shrink-0 sm:h-14 sm:w-14" />
@@ -1689,30 +1689,30 @@ export default function App() {
             </div>
           ) : null}
         </div>
-
-        <div className="border-t border-slate-200/75 bg-white/72">
-          <div className="mx-auto flex w-full max-w-[1600px] items-center gap-2 px-3 py-2.5 sm:no-scrollbar sm:gap-3 sm:overflow-x-auto sm:px-6 sm:py-3 lg:px-8">
-            <button
-              type="button"
-              onClick={() => {
-                setCategory('general');
-                resetSearch();
-              }}
-              className="news-card-shadow news-pressable inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 sm:h-10 sm:w-10"
-              title="Domov"
-            >
-              <Home className="h-4 w-4" />
-            </button>
-            <CategoryFilter
-              activeCategory={category}
-              onCategoryChange={(nextCategory) => {
-                setCategory(nextCategory);
-                resetSearch();
-              }}
-            />
-          </div>
-        </div>
       </header>
+
+      <div className="news-glass sticky top-0 z-40 border-b border-slate-200/75 bg-white/78">
+        <div className="mx-auto flex w-full max-w-[1600px] items-center gap-2 px-3 py-2.5 sm:no-scrollbar sm:gap-3 sm:overflow-x-auto sm:px-6 sm:py-3 lg:px-8">
+          <button
+            type="button"
+            onClick={() => {
+              setCategory('general');
+              resetSearch();
+            }}
+            className="news-card-shadow news-pressable inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 sm:h-10 sm:w-10"
+            title="Domov"
+          >
+            <Home className="h-4 w-4" />
+          </button>
+          <CategoryFilter
+            activeCategory={category}
+            onCategoryChange={(nextCategory) => {
+              setCategory(nextCategory);
+              resetSearch();
+            }}
+          />
+        </div>
+      </div>
 
       <main className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-6 px-3 py-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:gap-10 sm:px-6 sm:py-8 sm:pb-8 lg:px-8">
         {error ? (
