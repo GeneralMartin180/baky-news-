@@ -37,6 +37,8 @@ interface CommodityMarketWidgetProps {
   market: CommodityMarketSnapshot | null;
 }
 
+const BAKY_MARKETS_LOGO_SRC = '/baky-markets-logo.png';
+
 const GROUPS: Array<{
   icon: typeof ChartColumnBig;
   id: CommodityMarketGroup | 'all';
@@ -120,6 +122,16 @@ function getTrendClasses(quote: CommodityMarketQuote) {
 function TrendIcon({ quote, className = 'h-3.5 w-3.5' }: { quote: CommodityMarketQuote; className?: string }) {
   const Icon = quote.trend === 'up' ? ArrowUpRight : quote.trend === 'down' ? ArrowDownRight : Minus;
   return <Icon className={className} />;
+}
+
+function BakyMarketsLogo({ className = '' }: { className?: string }) {
+  return (
+    <img
+      alt="Baky Markets"
+      className={cn('block h-8 w-auto shrink-0 object-contain sm:h-9', className)}
+      src={BAKY_MARKETS_LOGO_SRC}
+    />
+  );
 }
 
 function aggregateCandles(quote: CommodityMarketQuote, maximumPoints: number) {
@@ -553,8 +565,7 @@ function MarketModal({
             <header className="flex min-w-0 shrink-0 items-center justify-between gap-3 border-t-4 border-sky-500 bg-gradient-to-r from-sky-50 via-white to-slate-50 px-3 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-6">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <ChartColumnBig className="h-5 w-5 text-sky-600" />
-                  <h2 className="truncate text-base font-semibold text-slate-950 sm:text-lg">Baky Markets</h2>
+                  <BakyMarketsLogo className="h-9 sm:h-10" />
                 </div>
                 <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500">
                   <Clock3 className="h-3 w-3" />
@@ -792,8 +803,7 @@ export function CommodityMarketWidget({
         <div className="flex min-w-0 items-center justify-between gap-2 border-t-4 border-sky-500 bg-gradient-to-r from-sky-50 via-white to-slate-50 px-3 py-3 sm:px-4">
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-              <ChartColumnBig className="h-4 w-4 shrink-0 text-sky-600" />
-              <h3 className="truncate text-sm font-semibold text-slate-950">Komoditné trhy</h3>
+              <BakyMarketsLogo className="h-7 sm:h-8" />
               {isLive ? (
                 <span className="hidden shrink-0 items-center gap-1 text-[10px] font-medium text-emerald-700 min-[390px]:flex">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
