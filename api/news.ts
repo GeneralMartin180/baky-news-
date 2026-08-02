@@ -47,8 +47,12 @@ const ARTICLE_IMAGE_CACHE_MS = 60 * 60 * 1000;
 const ARTICLE_IMAGE_ENRICHMENT_LIMIT = 24;
 const ARTICLE_IMAGE_TIMEOUT_MS = 3000;
 const GOOGLE_NEWS_DECODE_CACHE_MS = 60 * 60 * 1000;
+const GOOGLE_NEWS_PREVIEW_CACHE_MS = 60 * 60 * 1000;
+const GOOGLE_NEWS_SEARCH_HTML_CACHE_MS = 30 * 60 * 1000;
 const articleImageCache = new Map<string, { expiresAt: number; imageUrl: string }>();
 const googleNewsUrlCache = new Map<string, { expiresAt: number; url: string }>();
+const googleNewsPreviewImageCache = new Map<string, { expiresAt: number; imageUrl: string }>();
+const googleNewsSearchHtmlCache = new Map<string, { expiresAt: number; html: string }>();
 
 const CATEGORIES = new Set<Category>([
   "business",
@@ -236,6 +240,15 @@ function isSlovakEdition(language: LanguageCode, region: RegionCode) {
 
 function buildGoogleNewsSearchUrl(query: string, language: LanguageCode, region: RegionCode) {
   const url = new URL("https://news.google.com/rss/search");
+  url.searchParams.set("q", query);
+  url.searchParams.set("hl", language);
+  url.searchParams.set("gl", region);
+  url.searchParams.set("ceid", `${region}:${language}`);
+  return url.toString();
+}
+
+function buildGoogleNewsSearchPageUrl(query: string, language: LanguageCode, region: RegionCode) {
+  const url = new URL("https://news.google.com/search");
   url.searchParams.set("q", query);
   url.searchParams.set("hl", language);
   url.searchParams.set("gl", region);
@@ -660,6 +673,153 @@ function extractDecodedGoogleNewsUrl(responseText: string) {
   }
 }
 
+function extractGoogleNewsPreviewImageUrl(html: string) {
+  const previewImage =
+    extractAttribute(
+      html.match(/<meta\b[^>]*property=["']og:image["'][^>]*>/i)?.[0] ?? "",
+      "content"
+    ) ||
+    extractAttribute(
+      html.match(/<meta\b[^>]*name=["']twitter:image["'][^>]*>/i)?.[0] ?? "",
+      "content"
+    );
+
+  if (!previewImage) {
+    return "";
+  }
+
+  return previewImage.replace(/=s0-w\d+(?:-h\d+)?/i, "=s0-w1200");
+}
+
+function extractSearchHtmlImageCandidate(windowHtml: string) {
+  const candidates = [
+    /https:\/\/image\.smedata\.sk\/image\/w\d+-h\d+\/[^"'\s>]+/i,
+    /https:\/\/m\.smedata\.sk\/api-media\/media\/image\/[^"'\s>]+/i,
+    /https:\/\/image\.smedata\.sk\/[^"'\s>]+/i,
+    /https:\/\/m\.smedata\.sk\/[^"'\s>]+/i,
+  ];
+
+  for (const pattern of candidates) {
+    const match = windowHtml.match(pattern)?.[0] ?? "";
+    if (match) {
+      return decodeHtml(match)
+        .replace(/\\u003d/g, "=")
+        .replace(/\\u0026/g, "&")
+        .replace(/\\u002f/g, "/");
+    }
+  }
+
+  return "";
+}
+
+async function fetchGoogleNewsSearchPageHtml(query: string, language: LanguageCode, region: RegionCode) {
+  const searchUrl = buildGoogleNewsSearchPageUrl(query, language, region);
+  const now = Date.now();
+  const cached = googleNewsSearchHtmlCache.get(searchUrl);
+  if (cached && cached.expiresAt > now) {
+    return cached.html;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ARTICLE_IMAGE_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(searchUrl, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "sk-SK,sk;q=0.9,en;q=0.8",
+        "User-Agent": "Mozilla/5.0 BakyNews/1.0",
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Google News search page failed with ${response.status}`);
+    }
+
+    const html = await response.text();
+    googleNewsSearchHtmlCache.set(searchUrl, {
+      expiresAt: now + GOOGLE_NEWS_SEARCH_HTML_CACHE_MS,
+      html,
+    });
+    return html;
+  } catch (error) {
+    console.warn(`Google News search page fetch failed (${searchUrl})`, error);
+    googleNewsSearchHtmlCache.set(searchUrl, {
+      expiresAt: now + 5 * 60 * 1000,
+      html: "",
+    });
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function extractGoogleNewsSearchPreviewImage(
+  articleUrl: string,
+  query = "site:sme.sk/c/"
+) {
+  const searchHtml = await fetchGoogleNewsSearchPageHtml(query, "sk", "SK");
+  if (!searchHtml) {
+    return "";
+  }
+
+  const normalizedUrl = articleUrl.replace(/&amp;/g, "&");
+  const articleIndex = searchHtml.indexOf(normalizedUrl);
+  const windowHtml =
+    articleIndex >= 0
+      ? searchHtml.slice(Math.max(0, articleIndex - 6000), articleIndex + 4000)
+      : searchHtml;
+  const imageUrl = extractSearchHtmlImageCandidate(windowHtml);
+  if (imageUrl) {
+    return imageUrl;
+  }
+
+  return extractGoogleNewsPreviewImageUrl(searchHtml);
+}
+
+async function extractGoogleNewsPreviewImage(articleUrl: string) {
+  const now = Date.now();
+  const cached = googleNewsPreviewImageCache.get(articleUrl);
+  if (cached && cached.expiresAt > now) {
+    return cached.imageUrl;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ARTICLE_IMAGE_TIMEOUT_MS);
+
+  try {
+    const pageResponse = await fetch(articleUrl, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "sk-SK,sk;q=0.9,en;q=0.8",
+        "User-Agent": "Mozilla/5.0 BakyNews/1.0",
+      },
+      signal: controller.signal,
+    });
+
+    if (!pageResponse.ok) {
+      throw new Error(`Google News preview page failed with ${pageResponse.status}`);
+    }
+
+    const imageUrl = extractGoogleNewsPreviewImageUrl(await pageResponse.text());
+    googleNewsPreviewImageCache.set(articleUrl, {
+      expiresAt: now + GOOGLE_NEWS_PREVIEW_CACHE_MS,
+      imageUrl,
+    });
+    return imageUrl;
+  } catch (error) {
+    console.warn(`Google News preview image failed (${articleUrl})`, error);
+    googleNewsPreviewImageCache.set(articleUrl, {
+      expiresAt: now + 10 * 60 * 1000,
+      imageUrl: "",
+    });
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function decodeGoogleNewsArticleUrl(articleUrl: string) {
   if (!isGoogleNewsArticleUrl(articleUrl)) {
     return articleUrl;
@@ -776,11 +936,13 @@ async function enrichArticleImages(
           return false;
         }
       })();
-      const articleImage =
-        !isSmeProxyArticle &&
-        (!article.urlToImage || shouldEnhanceArticleImage(resolvedUrl, article.urlToImage))
-          ? await extractPrimaryArticleImage(resolvedUrl)
-          : "";
+
+      let articleImage = "";
+      if (isSmeProxyArticle) {
+        articleImage = await extractGoogleNewsSearchPreviewImage(resolvedUrl);
+      } else if (!article.urlToImage || shouldEnhanceArticleImage(resolvedUrl, article.urlToImage)) {
+        articleImage = await extractPrimaryArticleImage(resolvedUrl);
+      }
 
       result[index] =
         resolvedUrl === article.url && (!articleImage || articleImage === article.urlToImage)
