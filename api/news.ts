@@ -111,35 +111,26 @@ const LOCAL_EDITIONS: Record<
 const GLOBAL_CATEGORY_FEEDS: Record<Exclude<Category, "general">, FeedCandidate[]> = {
   business: [
     { label: "bbc-business", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/business/rss.xml" },
-    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
   ],
   science: [
     { label: "bbc-science", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" },
-    { label: "bbc-technology", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/technology/rss.xml" },
-    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
   ],
   sports: [
     { label: "bbc-sport", sourceName: "BBC Sport", url: "https://feeds.bbci.co.uk/sport/rss.xml" },
-    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
   ],
   technology: [
     { label: "bbc-technology", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/technology/rss.xml" },
-    { label: "bbc-science", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" },
-    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
   ],
 };
 
 const SLOVAK_FEEDS: Record<Category, FeedCandidate[]> = {
   business: [
     { label: "aktuality-business", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/ekonomika/" },
-    { label: "pravda-business", sourceName: "Pravda", url: "https://www.pravda.sk/ekonomika/rss/xml" },
     {
       label: "sme-business",
-      provider: "google-news",
       sourceName: "SME",
-      url: buildGoogleNewsSearchUrl("site:sme.sk/c/ ekonomika", "sk", "SK"),
+      url: "https://www.sme.sk/index/rss-title",
     },
-    { label: "startitup-business", sourceName: "Startitup", url: "https://www.startitup.sk/feed/" },
   ],
   general: [
     { label: "aktuality-general", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/" },
@@ -155,32 +146,23 @@ const SLOVAK_FEEDS: Record<Category, FeedCandidate[]> = {
   ],
   science: [
     { label: "pravda-science", sourceName: "Pravda", url: "https://www.pravda.sk/vat/rss/xml" },
-    {
-      label: "sme-science",
-      provider: "google-news",
-      sourceName: "SME",
-      url: buildGoogleNewsSearchUrl("site:sme.sk/c/ veda", "sk", "SK"),
-    },
   ],
   sports: [
     { label: "sport-aktuality", sourceName: "Sport.sk", url: "https://sport.aktuality.sk/rss/" },
     { label: "pravda-sports", sourceName: "Pravda", url: "https://www.pravda.sk/sportweb/rss/xml" },
     {
       label: "sme-sports",
-      provider: "google-news",
-      sourceName: "SME",
-      url: buildGoogleNewsSearchUrl("site:sme.sk/c/ sport", "sk", "SK"),
+      sourceName: "Sportnet",
+      url: "https://sportnet.sme.sk/rss/",
     },
   ],
   technology: [
     { label: "zive", sourceName: "Zive.sk", url: "https://zive.aktuality.sk/rss/najnovsie/" },
     {
       label: "sme-technology",
-      provider: "google-news",
       sourceName: "SME",
-      url: buildGoogleNewsSearchUrl("site:sme.sk/c/ technológie", "sk", "SK"),
+      url: "https://www.sme.sk/tech/rss-title",
     },
-    { label: "pravda-technology", sourceName: "Pravda", url: "https://www.pravda.sk/vat/rss/xml" },
   ],
 };
 
