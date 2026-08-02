@@ -108,28 +108,53 @@ const SLOVAK_FEEDS: Record<Category, FeedCandidate[]> = {
   business: [
     { label: "aktuality-business", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/ekonomika/" },
     { label: "pravda-business", sourceName: "Pravda", url: "https://www.pravda.sk/ekonomika/rss/xml" },
-    { label: "dennikn-business", sourceName: "Denník N", url: "https://dennikn.sk/ekonomika/feed" },
+    {
+      label: "sme-business",
+      provider: "google-news",
+      sourceName: "SME",
+      url: buildGoogleNewsSearchUrl("site:sme.sk/c/ ekonomika", "sk", "SK"),
+    },
     { label: "startitup-business", sourceName: "Startitup", url: "https://www.startitup.sk/feed/" },
   ],
   general: [
     { label: "aktuality-general", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/" },
     { label: "pravda-general", sourceName: "Pravda", url: "https://www.pravda.sk/spravy/rss/xml" },
     { label: "pravda-regions", sourceName: "Pravda", url: "https://www.pravda.sk/spravy/regiony/rss/xml" },
-    { label: "dennikn-general", sourceName: "Denník N", url: "https://dennikn.sk/feed" },
+    {
+      label: "sme-general",
+      provider: "google-news",
+      sourceName: "SME",
+      url: buildGoogleNewsSearchUrl("site:sme.sk/c/", "sk", "SK"),
+    },
     { label: "startitup-general", sourceName: "Startitup", url: "https://www.startitup.sk/feed/" },
   ],
   science: [
     { label: "pravda-science", sourceName: "Pravda", url: "https://www.pravda.sk/vat/rss/xml" },
-    { label: "dennikn-science", sourceName: "Denník N", url: "https://dennikn.sk/veda/feed" },
+    {
+      label: "sme-science",
+      provider: "google-news",
+      sourceName: "SME",
+      url: buildGoogleNewsSearchUrl("site:sme.sk/c/ veda", "sk", "SK"),
+    },
   ],
   sports: [
     { label: "sport-aktuality", sourceName: "Sport.sk", url: "https://sport.aktuality.sk/rss/" },
     { label: "pravda-sports", sourceName: "Pravda", url: "https://www.pravda.sk/sportweb/rss/xml" },
-    { label: "dennikn-sports", sourceName: "Denník N", url: "https://dennikn.sk/sport/feed" },
+    {
+      label: "sme-sports",
+      provider: "google-news",
+      sourceName: "SME",
+      url: buildGoogleNewsSearchUrl("site:sme.sk/c/ sport", "sk", "SK"),
+    },
   ],
   technology: [
     { label: "zive", sourceName: "Zive.sk", url: "https://zive.aktuality.sk/rss/najnovsie/" },
-    { label: "dennikn-technology", sourceName: "Denník N", url: "https://dennikn.sk/veda/feed" },
+    {
+      label: "sme-technology",
+      provider: "google-news",
+      sourceName: "SME",
+      url: buildGoogleNewsSearchUrl("site:sme.sk/c/ technológie", "sk", "SK"),
+    },
     { label: "pravda-technology", sourceName: "Pravda", url: "https://www.pravda.sk/vat/rss/xml" },
   ],
 };
@@ -729,6 +754,7 @@ async function enrichArticleImages(
     .map((article, index) => ({ article, index }))
     .filter(
       ({ article }) =>
+        article.feedProvider === "google-news" ||
         provider === "google-news" ||
         !article.urlToImage ||
         shouldEnhanceArticleImage(article.url, article.urlToImage)
@@ -737,9 +763,22 @@ async function enrichArticleImages(
 
   await Promise.all(
     priorityArticles.map(async ({ article, index }) => {
-      const resolvedUrl = await resolveArticleUrl(article.url, provider);
+      const articleProvider = article.feedProvider ?? provider;
+      const resolvedUrl = await resolveArticleUrl(article.url, articleProvider);
+      const isSmeProxyArticle = (() => {
+        if (articleProvider !== "google-news") {
+          return false;
+        }
+
+        try {
+          return new URL(resolvedUrl).hostname.toLowerCase().endsWith("sme.sk");
+        } catch {
+          return false;
+        }
+      })();
       const articleImage =
-        !article.urlToImage || shouldEnhanceArticleImage(resolvedUrl, article.urlToImage)
+        !isSmeProxyArticle &&
+        (!article.urlToImage || shouldEnhanceArticleImage(resolvedUrl, article.urlToImage))
           ? await extractPrimaryArticleImage(resolvedUrl)
           : "";
 
@@ -861,6 +900,7 @@ function parseItems(xml: string, candidate: FeedCandidate): NewsArticle[] {
           description.length > 8
             ? `${description.slice(0, 240)}${description.length > 240 ? "..." : ""}`
             : "Kliknite pre zobrazenie celeho clanku a podrobnosti.",
+        feedProvider: candidate.provider,
         publishedAt: pubDate || new Date().toUTCString(),
         source: {
           name: sourceName,
@@ -869,7 +909,7 @@ function parseItems(xml: string, candidate: FeedCandidate): NewsArticle[] {
         urlToImage: extractImageFromItem(item, link || candidate.url),
       } satisfies NewsArticle;
     })
-    .filter((article): article is NewsArticle => Boolean(article));
+    .filter(Boolean) as NewsArticle[];
 }
 
 function normalizeText(value: string) {
@@ -921,6 +961,34 @@ function filterWeatherOnlyArticles(articles: NewsArticle[]) {
       title.includes("predpoved pocasia") ||
       title.includes("minutecast")
     );
+  });
+}
+
+function isSmeNewsUrl(value: string) {
+  try {
+    const parsedUrl = new URL(value);
+    const host = parsedUrl.hostname.toLowerCase();
+    const pathname = parsedUrl.pathname.toLowerCase();
+    return (
+      (host === "www.sme.sk" || host === "korzar.sme.sk") &&
+      pathname.includes("/c/")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function filterSmeProxyArticles(articles: NewsArticle[]) {
+  return articles.filter((article) => {
+    if (article.feedProvider !== "google-news") {
+      return true;
+    }
+
+    if (!normalizeText(article.source.name).includes("sme")) {
+      return true;
+    }
+
+    return isSmeNewsUrl(article.url);
   });
 }
 
@@ -1166,10 +1234,11 @@ async function fetchArticles(
     36
   );
   const articles = !query ? await enrichArticleImages(merged) : merged;
+  const normalizedArticles = !query ? filterSmeProxyArticles(articles) : articles;
   const prioritizedArticles =
     !query && category === "general"
-      ? prioritizeSourceArticle(articles, "Aktuality.sk", ["Aktuality", "Aktuality.sk"])
-      : articles;
+      ? prioritizeSourceArticle(normalizedArticles, "Aktuality.sk", ["Aktuality", "Aktuality.sk"])
+      : normalizedArticles;
   return {
     articles: prioritizedArticles,
     sourceMode,

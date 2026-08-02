@@ -1,6 +1,7 @@
 export interface NewsArticle {
   contentToken?: string;
   contentOverride?: string;
+  feedProvider?: "google-news" | "yahoo-news";
   title: string;
   description: string;
   url: string;
