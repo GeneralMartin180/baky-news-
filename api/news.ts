@@ -104,31 +104,6 @@ const LOCAL_EDITIONS: Record<
   },
 };
 
-const BBC_FEEDS: Record<Category, FeedCandidate[]> = {
-  business: [
-    { label: "bbc-business", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/business/rss.xml" },
-    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
-  ],
-  general: [
-    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
-    { label: "bbc-world", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
-  ],
-  science: [
-    { label: "bbc-science", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" },
-    { label: "bbc-technology", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/technology/rss.xml" },
-    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
-  ],
-  sports: [
-    { label: "bbc-sport", sourceName: "BBC Sport", url: "https://feeds.bbci.co.uk/sport/rss.xml" },
-    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
-  ],
-  technology: [
-    { label: "bbc-technology", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/technology/rss.xml" },
-    { label: "bbc-science", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" },
-    { label: "bbc-news", sourceName: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
-  ],
-};
-
 const SLOVAK_FEEDS: Record<Category, FeedCandidate[]> = {
   business: [
     { label: "aktuality-business", sourceName: "Aktuality.sk", url: "https://www.aktuality.sk/rss/ekonomika/" },
@@ -142,7 +117,6 @@ const SLOVAK_FEEDS: Record<Category, FeedCandidate[]> = {
     { label: "pravda-regions", sourceName: "Pravda", url: "https://www.pravda.sk/spravy/regiony/rss/xml" },
     { label: "dennikn-general", sourceName: "Denník N", url: "https://dennikn.sk/feed" },
     { label: "startitup-general", sourceName: "Startitup", url: "https://www.startitup.sk/feed/" },
-    { label: "eu-featured-news", sourceName: "European Union", url: "https://european-union.europa.eu/node/309/rss_en" },
   ],
   science: [
     { label: "pravda-science", sourceName: "Pravda", url: "https://www.pravda.sk/vat/rss/xml" },
@@ -284,14 +258,14 @@ function buildCandidates(options: FeedOptions): FeedCandidate[] {
   const slovakCandidates = isSlovakEdition(options.language, options.region)
     ? [
         ...(SLOVAK_FEEDS[options.category] ?? []),
-        ...(options.category === "general" ? [SLOVAK_FEEDS.business[0], SLOVAK_FEEDS.technology[0], SLOVAK_FEEDS.sports[0]] : []),
+        ...(options.category === "general"
+          ? [SLOVAK_FEEDS.business[0], SLOVAK_FEEDS.technology[0], SLOVAK_FEEDS.sports[0]]
+          : []),
       ]
     : [];
-  const globalCandidates = [...(BBC_FEEDS[options.category] ?? BBC_FEEDS.general), ...BBC_FEEDS.general];
 
   return dedupeCandidates([
     ...slovakCandidates,
-    ...globalCandidates,
   ]);
 }
 
