@@ -124,6 +124,33 @@ function TrendIcon({ quote, className = 'h-3.5 w-3.5' }: { quote: CommodityMarke
   return <Icon className={className} />;
 }
 
+function FufuArrow({ quote, className = 'h-4 w-4' }: { quote: CommodityMarketQuote; className?: string }) {
+  const Icon = quote.trend === 'up' ? ArrowUpRight : quote.trend === 'down' ? ArrowDownRight : Minus;
+  const magnitude = Math.min(Math.abs(quote.changePercent ?? 0), 6);
+  const motionState =
+    quote.trend === 'up'
+      ? { rotate: -10 - magnitude * 3, y: -Math.min(1.5, magnitude * 0.25) }
+      : quote.trend === 'down'
+        ? { rotate: 10 + magnitude * 3, y: Math.min(1.5, magnitude * 0.25) }
+        : { rotate: 0, y: 0 };
+  const colorClass = quote.trend === 'up'
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    : quote.trend === 'down'
+      ? 'border-rose-200 bg-rose-50 text-rose-700'
+      : 'border-slate-200 bg-slate-50 text-slate-500';
+
+  return (
+    <motion.span
+      aria-hidden="true"
+      className={cn('inline-flex shrink-0 items-center justify-center rounded-full border shadow-sm', colorClass)}
+      animate={motionState}
+      transition={{ duration: 0.14, ease: 'easeOut' }}
+    >
+      <Icon className={className} />
+    </motion.span>
+  );
+}
+
 function BakyMarketsLogo({ className = '' }: { className?: string }) {
   return (
     <img
@@ -157,6 +184,24 @@ function aggregateCandles(quote: CommodityMarketQuote, maximumPoints: number) {
   });
 }
 
+function getNormalizedHistory(quote: CommodityMarketQuote, mode: CommodityChartMode, maximumPoints: number) {
+  if (!quote.history.length) {
+    return [
+      {
+        close: quote.value,
+        high: quote.dayHigh ?? quote.value,
+        low: quote.dayLow ?? quote.value,
+        open: quote.previousValue ?? quote.value,
+        period: quote.marketTime,
+        value: quote.value,
+        volume: quote.volume ?? null,
+      },
+    ];
+  }
+
+  return mode === 'candles' ? aggregateCandles(quote, maximumPoints) : quote.history;
+}
+
 function getChartData(
   quote: CommodityMarketQuote,
   width: number,
@@ -165,7 +210,7 @@ function getChartData(
   mode: CommodityChartMode
 ) {
   const maximumCandles = Math.max(18, Math.min(compact ? 48 : 90, Math.floor(width / (compact ? 7 : 9))));
-  const history = mode === 'candles' ? aggregateCandles(quote, maximumCandles) : quote.history;
+  const history = getNormalizedHistory(quote, mode, maximumCandles);
   const lows = history.map((point) => mode === 'candles' ? point.low ?? point.value : point.value);
   const highs = history.map((point) => mode === 'candles' ? point.high ?? point.value : point.value);
   const values = history.map((point) => point.close ?? point.value);
@@ -250,12 +295,20 @@ function MarketChart({
   const chartColor = compact ? colors.fill : '#0088cc';
   const hoveredPoint = hoveredIndex === null ? null : chart.points[hoveredIndex];
   const gradientId = `market-area-${quote.id}-${range}-${mode}-${compact ? 'small' : 'large'}`;
+  const hoveredPointY = hoveredPoint
+    ? mode === 'candles'
+      ? Math.max(12, Math.min(height - 12, (hoveredPoint.highY + hoveredPoint.lowY) / 2))
+      : hoveredPoint.y
+    : null;
 
   const handlePointerMove = (event: PointerEvent<SVGSVGElement>) => {
     if (compact) return;
     const bounds = event.currentTarget.getBoundingClientRect();
     const ratio = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
-    setHoveredIndex(Math.round(ratio * Math.max(chart.points.length - 1, 0)));
+    const nextIndex = mode === 'candles'
+      ? Math.floor(ratio * Math.max(chart.points.length, 1))
+      : Math.round(ratio * Math.max(chart.points.length - 1, 0));
+    setHoveredIndex(Math.min(Math.max(nextIndex, 0), Math.max(chart.points.length - 1, 0)));
   };
 
   return (
@@ -381,14 +434,41 @@ function MarketChart({
           <g>
             <line stroke={chartColor} strokeDasharray="4 4" x1={hoveredPoint.x} x2={hoveredPoint.x} y1="0" y2={height} />
             {mode === 'line' ? <circle cx={hoveredPoint.x} cy={hoveredPoint.y} fill="white" r="5" stroke={chartColor} strokeWidth="3" /> : null}
-            <g transform={`translate(${Math.min(Math.max(hoveredPoint.x - 62, 4), Math.max(chart.plotWidth - 128, 4))} ${Math.max(hoveredPoint.y - 58, 4)})`}>
-              <rect fill="white" height="46" rx="6" stroke="#cbd5e1" width="124" />
-              <text fill="#0f172a" fontSize="13" fontWeight="600" x="10" y="19">
-                {formatPrice(hoveredPoint.value)}
-              </text>
-              <text fill="#64748b" fontSize="10" x="10" y="35">
-                {formatChartTime(hoveredPoint.period, range)}
-              </text>
+            {mode === 'candles' ? (
+              <rect
+                fill={hoveredPoint.close >= hoveredPoint.open ? '#10b981' : '#ef4444'}
+                fillOpacity="0.12"
+                height={Math.max(hoveredPoint.lowY - hoveredPoint.highY + 8, 14)}
+                rx="4"
+                width={Math.max(chart.candleWidth + 8, 12)}
+                x={hoveredPoint.x - Math.max(chart.candleWidth + 8, 12) / 2}
+                y={Math.max(hoveredPoint.highY - 4, 0)}
+              />
+            ) : null}
+            <g transform={`translate(${Math.min(Math.max(hoveredPoint.x - (mode === 'candles' ? 82 : 62), 4), Math.max(chart.plotWidth - (mode === 'candles' ? 168 : 128), 4))} ${Math.max((hoveredPointY ?? 0) - (mode === 'candles' ? 84 : 58), 4)})`}>
+              <rect fill="white" height={mode === 'candles' ? 72 : 46} rx="6" stroke="#cbd5e1" width={mode === 'candles' ? 164 : 124} />
+              {mode === 'candles' ? (
+                <>
+                  <text fill="#0f172a" fontSize="12" fontWeight="700" x="10" y="17">
+                    {formatChartTime(hoveredPoint.period, range)}
+                  </text>
+                  <text fill="#475569" fontSize="11" x="10" y="34">
+                    O {formatPrice(hoveredPoint.open)}  H {formatPrice(hoveredPoint.high)}
+                  </text>
+                  <text fill="#475569" fontSize="11" x="10" y="50">
+                    L {formatPrice(hoveredPoint.low)}  C {formatPrice(hoveredPoint.close)}
+                  </text>
+                </>
+              ) : (
+                <>
+                  <text fill="#0f172a" fontSize="13" fontWeight="600" x="10" y="19">
+                    {formatPrice(hoveredPoint.value)}
+                  </text>
+                  <text fill="#64748b" fontSize="10" x="10" y="35">
+                    {formatChartTime(hoveredPoint.period, range)}
+                  </text>
+                </>
+              )}
             </g>
           </g>
         ) : null}
@@ -453,7 +533,10 @@ function QuoteButton({ active, dark = false, onClick, quote }: { active?: boolea
         <span className="truncate text-xs font-semibold text-slate-950">{quote.shortLabel}</span>
         <span className="text-[10px] text-slate-400">{quote.symbol}</span>
       </div>
-      <div className="mt-2 text-base font-semibold tabular-nums text-slate-950">{formatPrice(quote.value)}</div>
+      <div className="mt-2 flex items-center gap-2 text-base font-semibold tabular-nums text-slate-950">
+        <span>{formatPrice(quote.value)}</span>
+        <FufuArrow className="h-4 w-4" quote={quote} />
+      </div>
       <div className={cn('mt-0.5 flex items-center gap-1 text-xs font-semibold tabular-nums', colors.text)}>
         <TrendIcon quote={quote} />
         {formatPercent(quote.changePercent)}
@@ -660,8 +743,9 @@ function MarketModal({
                       </div>
                   <h3 className="mt-2 text-lg font-semibold text-slate-950 sm:text-2xl">{selectedQuote.label}</h3>
                   <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-1">
-                        <span className="text-2xl font-semibold tabular-nums text-slate-950 sm:text-5xl">
-                          {formatPrice(selectedQuote.value)}
+                        <span className="inline-flex items-center gap-2 text-2xl font-semibold tabular-nums text-slate-950 sm:text-5xl">
+                          <span>{formatPrice(selectedQuote.value)}</span>
+                          <FufuArrow className="h-5 w-5 sm:h-8 sm:w-8" quote={selectedQuote} />
                         </span>
                         <span className="pb-1 text-sm font-medium text-slate-500">{selectedQuote.currency}</span>
                       </div>
@@ -851,7 +935,10 @@ export function CommodityMarketWidget({
             <span className="shrink-0"><MarketStatus quote={featuredQuote} /></span>
           </div>
           <div className="mt-2 flex min-w-0 flex-wrap items-end gap-x-2 gap-y-1">
-            <span className="text-2xl font-semibold tabular-nums text-slate-950">{formatPrice(featuredQuote.value)}</span>
+            <span className="inline-flex items-center gap-2 text-2xl font-semibold tabular-nums text-slate-950">
+              <span>{formatPrice(featuredQuote.value)}</span>
+              <FufuArrow className="h-4 w-4 sm:h-5 sm:w-5" quote={featuredQuote} />
+            </span>
             <span className="pb-1 text-xs text-slate-500">{featuredQuote.currency}</span>
             <span className={cn('flex items-center gap-1 pb-1 text-xs font-semibold', colors.text)}>
               <TrendIcon quote={featuredQuote} />

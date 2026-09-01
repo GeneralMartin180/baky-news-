@@ -10,14 +10,14 @@
   "theme_color": "#f8fafc",
   "icons": [
     {
-      "src": "/baky_news-removebg-preview.png",
-      "sizes": "500x500",
+      "src": "/baky-news-favicon.png?v=2026-09-01-baky-tab",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/baky_news-removebg-preview.png",
-      "sizes": "500x500",
+      "src": "/baky-news-favicon.png?v=2026-09-01-baky-tab",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
