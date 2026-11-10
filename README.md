@@ -1,6 +1,18 @@
 # Baky News
 
-Baky News je news agregator postaveny na `React + Vite` s backendom na `Node.js/Express`.
+![Baky News on desktop and mobile](docs/baky-news-showcase.png)
+
+**World news. Zero ads. No tracking scripts.**
+
+Catch up on the stories that matter with a privacy-first news reader for desktop and mobile. No account needed. Just headlines, short previews and links to the original reporting.
+
+**[Start reading →](https://baky-news.vercel.app/)** · Hosted on Vercel · Source code on GitHub
+
+Baky News doesn't run ads or include its own reader-tracking scripts. External publishers and resources may have their own privacy practices.
+
+## In this repository
+
+Baky News je spravodajský agregátor postavený na Reacte a Vite s backendom na Node.js a Expresse.
 
 Frontend:
 - editorial feed v style modern news app
